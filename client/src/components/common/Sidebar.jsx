@@ -74,11 +74,9 @@ const Sidebar = ({ isOpen }) => {
       } md:block`}
     >
       {/* Logo or Top */}
-      <div className="mb-6 w-full bg-orange-500 px-4 py-2">
+      <div className="mb-6 w-full  px-4 py-2 pt-3">
         <Link to="/dashboard" className="flex items-center gap-3 font-bold text-xl">
-          <div className="">
-            <img className="h-[40px]" src={logo} alt="" />
-          </div>
+          <h1 className="text-[20px] font-[700] text-blue-600">NagodPay</h1>
         </Link>
       </div>
 

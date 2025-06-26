@@ -76,14 +76,14 @@ const Login = () => {
         }
       });
 
-      const { success, message, token, user ,merchant} = response.data;
+      const { success, message, token, user } = response.data;
 
       if (success) {
         toast.success('Login successful!');
         
         // Store token and user data
         localStorage.setItem('authToken', token);
-        localStorage.setItem('userData', JSON.stringify(merchant));
+        localStorage.setItem('userData', JSON.stringify(user));
         
         // Redirect to dashboard
         setTimeout(() => {
