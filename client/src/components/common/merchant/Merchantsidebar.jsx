@@ -11,8 +11,7 @@ import { IoHomeOutline } from "react-icons/io5";
 import { MdOutlineVideoChat } from "react-icons/md";
 import { TfiLayoutSliderAlt } from "react-icons/tfi";
 import { LuKeySquare } from "react-icons/lu";
-import { MdOutlinePayment } from "react-icons/md";
-const Sidebar = ({ isOpen }) => {
+const Merchantsidebar = ({ isOpen }) => {
   const location = useLocation();
   const [openMenu, setOpenMenu] = useState(null);
 
@@ -47,7 +46,7 @@ const Sidebar = ({ isOpen }) => {
       {/* Dashboard */}
       <div className="mb-3">
         <NavLink
-          to="/dashboard"
+          to="/merchant"
           className={({ isActive }) =>
             `flex items-center justify-between w-full px-3 py-2 text-[15px] lg:text-[16px] cursor-pointer rounded-[5px] transition duration-200 `
           }
@@ -58,22 +57,9 @@ const Sidebar = ({ isOpen }) => {
           </span>
         </NavLink>
       </div>
-     <div className="mb-3">
-        <NavLink
-          to="/dashboard/agents"
-          className={({ isActive }) =>
-            `flex items-center justify-between w-full px-3 py-2 text-[15px] lg:text-[16px] cursor-pointer rounded-[5px] transition duration-200`
-          }
-        >
-          <span className="flex items-center gap-2 text-gray-100">
-            <LuClipboardList className="text-[18px]" />
-            Agent
-          </span>
-        </NavLink>
-      </div>
        <div className="mb-3">
         <NavLink
-          to="/dashboard/prepayment-requests"
+          to="/merchant/payment-request"
           className={({ isActive }) =>
             `flex items-center justify-between w-full px-3 py-2 text-[15px] lg:text-[16px] cursor-pointer rounded-[5px] transition duration-200`
           }
@@ -84,22 +70,9 @@ const Sidebar = ({ isOpen }) => {
           </span>
         </NavLink>
       </div>
-         <div className="mb-3">
-        <NavLink
-          to="/dashboard/merchant-payment"
-          className={({ isActive }) =>
-            `flex items-center justify-between w-full px-3 py-2 text-[15px] lg:text-[16px] cursor-pointer rounded-[5px] transition duration-200`
-          }
-        >
-          <span className="flex items-center gap-2 text-gray-100">
-            <MdOutlinePayment className="text-[18px]" />
-           Merchant Payment
-          </span>
-        </NavLink>
-      </div>
         <div className="mb-3">
         <NavLink
-          to="/dashboard/all-payin"
+          to="/merchant/payin"
           className={({ isActive }) =>
             `flex items-center justify-between w-full px-3 py-2 text-[15px] lg:text-[16px] cursor-pointer rounded-[5px] transition duration-200`
           }
@@ -112,7 +85,7 @@ const Sidebar = ({ isOpen }) => {
       </div>
              <div className="mb-3">
         <NavLink
-          to="/dashboard/all-payout"
+          to="/merchant/payout"
           className={({ isActive }) =>
             `flex items-center justify-between w-full px-3 py-2 text-[15px] lg:text-[16px] cursor-pointer rounded-[5px] transition duration-200`
           }
@@ -123,29 +96,7 @@ const Sidebar = ({ isOpen }) => {
           </span>
         </NavLink>
       </div>
-      
-             <div className="mb-3">
-        <NavLink
-          to="/dashboard/generate-key"
-          className={({ isActive }) =>
-            `flex items-center justify-between w-full px-3 py-2 text-[15px] lg:text-[16px] cursor-pointer rounded-[5px] transition duration-200`
-          }
-        >
-          <span className="flex items-center gap-2 text-gray-100">
-            <LuKeySquare className="text-[18px]" />
-            Api Key
-          </span>
-        </NavLink>
-      </div>
-       <NavLink
-         to="/dashboard/forward-sms"
-          className={ ` flex items-center justify-between w-full px-3 py-2 text-[15px] lg:text-[16px] cursor-pointer rounded-[5px] transition duration-200`}
-        >
-          <span className="flex items-center gap-2 text-gray-100">
-            <LiaChalkboardTeacherSolid className="text-[18px]" />
-            Forward SMS
-          </span>
-        </NavLink>
+  
 
       {/* Sidebar Menus */}
       {[
@@ -267,7 +218,7 @@ const Sidebar = ({ isOpen }) => {
               : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
           }`}
         >
-          <NavLink to="/dashboard/settings/profile">
+          <NavLink to="/merchant/profile">
       <span className="flex items-center gap-2">
             <FaCog className="text-[18px]" />
             Settings
@@ -282,4 +233,4 @@ const Sidebar = ({ isOpen }) => {
   );
 };
 
-export default Sidebar;
+export default Merchantsidebar;

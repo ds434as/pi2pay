@@ -34,6 +34,7 @@ function generate256Hash(data) {
 crypto.createHash
 Paymentrouter.post("/payment",async(req, res)=>{
   try {
+    const apiKey = req.headers['x-api-key']?req.headers['x-api-key']:'';
   var data = req.body;
     if (
       !data.provider ||
@@ -79,6 +80,11 @@ Paymentrouter.post("/payment",async(req, res)=>{
       });
     }
 
+    // ---------------------------matched-merchant------------------
+    const matched_merchant=await Merchantkey.findOne({apiKey:apiKey});
+    if(!matched_merchant){
+      return res.send({success:false,message:"Wrong merchant api key!"})
+    }
     // -----------------------create-new-transaction-------------------
         const paymentId = nanoid(8); // uuidv4();
 
@@ -92,6 +98,7 @@ Paymentrouter.post("/payment",async(req, res)=>{
       redirectUrl: data.redirectUrl,
       callbackUrl: data.callbackUrl,
       paymentType: "p2p",
+      merchantid:matched_merchant._id,
     });
 
     return res.status(200).json({
@@ -110,7 +117,6 @@ Paymentrouter.post("/payout", async (req, res) => {
   console.log("payout-data", data);
   const generateAlphaId = customAlphabet(alphabet, 8);
       const apiKey = req.headers['x-api-key']?req.headers['x-api-key']:'';
-    console.log(apiKey)
   // Validation checks
   if (
     !data.provider ||
@@ -129,6 +135,11 @@ Paymentrouter.post("/payout", async (req, res) => {
   }
 
   try {
+      // ---------------------------matched-merchant------------------
+    const matched_merchant=await Merchantkey.findOne({apiKey:apiKey});
+    if(!matched_merchant){
+      return res.send({success:false,message:"Wrong merchant api key!"})
+    }
     // Find all agent users with balance >= payout amount
     const eligibleAgents = await UserModel.find({
       is_admin:false,
@@ -160,7 +171,8 @@ Paymentrouter.post("/payout", async (req, res) => {
       currency: data.currency,
       callbackUrl: data.callbackUrl,
       status: "pending",
-      assignedAgent: randomAgent._id // Track which agent this was assigned to
+      assignedAgent: randomAgent._id, // Track which agent this was assigned to
+      merchantid:matched_merchant._id
     });
 
     if (!newTransaction) {
@@ -465,6 +477,11 @@ Paymentrouter.post("/paymentSubmit",  async (req, res) => {
        bankaccount.total_recieved+=forwardedSms.transactionAmount;
        bankaccount.save();
 
+      //  ------------------merchant---------------------
+      const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
+      merchant_info.balance-=forwardedSms.transactionAmount;
+      merchant_info.total_payin+=forwardedSms.transactionAmount;
+      merchant_info.save();
       //  ------------------update-agent-------------------
       const comissionmoney=(forwardedSms.transactionAmount/100)*matcheduser.depositcommission;
       console.log(comissionmoney)
@@ -624,6 +641,11 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
       bankaccount.total_payoutno+=1;
       bankaccount.total_cashout+=forwardedSms.transactionAmount;
       bankaccount.save();
+         //  ------------------merchant---------------------
+      const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
+      merchant_info.balance+=forwardedSms.transactionAmount;
+      merchant_info.total_payout+=forwardedSms.transactionAmount;
+      merchant_info.save();
     }
 
     // Update the transaction status

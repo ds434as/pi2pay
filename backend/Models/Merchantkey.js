@@ -1,6 +1,6 @@
-// models/Merchant.js
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 
 const merchantSchema = new mongoose.Schema({
   name: {
@@ -15,6 +15,11 @@ const merchantSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6
+  },
   websiteUrl: {
     type: String,
     required: true,
@@ -28,14 +33,19 @@ const merchantSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  balance:{
+    type:Number,
+    default:0,
+  },
+  total_payin:{
+    type:Number,
+    default:0,
+  },
+  total_payout:{
+    type:Number,
+    default:0,
   }
 });
 
-merchantSchema.pre('save', function(next) {
-  if (this.apiKey.length !== 20) {
-    this.apiKey = crypto.randomBytes(10).toString('hex');
-  }
-  next();
-});
-
-module.exports = mongoose.model('MerchantKey', merchantSchema);
+module.exports = mongoose.model('Merchant', merchantSchema);

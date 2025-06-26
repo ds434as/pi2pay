@@ -7,6 +7,7 @@ const ProductRouter = require('./Routes/ProductRouter');
 const Adminroute = require('./Routes/Adminroute');
 const Userrouter = require('./Routes/Userroute');
 const Paymentrouter = require('./Routes/payment');
+const Merchantrouter = require('./Routes/Merchantrouter');
 
 require('dotenv').config();
 require('./Models/db');
@@ -24,6 +25,7 @@ app.use(cors( {
       "http://localhost:5174",
       "http://localhost:5175",
       "http://localhost:5176",
+      "http://localhost:5177",
       "http://localhost:3000",
       "https://pi2payz.com",
       "https://admin.pi2payz.com",
@@ -40,6 +42,7 @@ app.use('/products', ProductRouter);
 app.use('/api/admin', Adminroute);
 app.use('/api/user',Userrouter);
 app.use('/api/payment',Paymentrouter);
+app.use('/api/merchant',Merchantrouter);
 
 app.listen(PORT, () => {
     console.log(`Server is running on ${PORT}`)

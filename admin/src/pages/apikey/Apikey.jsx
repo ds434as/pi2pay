@@ -13,6 +13,7 @@ const Apikey = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     websiteUrl: ''
   });
   const [editingId, setEditingId] = useState(null);
@@ -32,7 +33,7 @@ const Apikey = () => {
           Authorization: `Bearer ${token}`
         }
       });
-      setMerchants(response.data.merchant);
+      setMerchants(response.data.merchants || response.data.merchant || []);
     } catch (error) {
       toast.error('Failed to fetch merchants');
       console.error('Error fetching merchants:', error);
@@ -50,9 +51,19 @@ const Apikey = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Validate password length if creating new merchant
+      if (!editingId && formData.password.length < 6) {
+        return toast.error('Password must be at least 6 characters');
+      }
+
       if (editingId) {
-        // Update existing merchant
-        await axios.put(`${base_url}/api/admin/merchant-key/${editingId}`, formData, {
+        // Update existing merchant - exclude password unless it's being changed
+        const updateData = { ...formData };
+        if (!updateData.password) {
+          delete updateData.password;
+        }
+        
+        await axios.put(`${base_url}/api/admin/merchant-key/${editingId}`, updateData, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -67,7 +78,7 @@ const Apikey = () => {
         });
         toast.success('Merchant created successfully');
       }
-      setFormData({ name: '', email: '', websiteUrl: '' });
+      setFormData({ name: '', email: '', password: '', websiteUrl: '' });
       setEditingId(null);
       fetchMerchants();
     } catch (error) {
@@ -84,6 +95,7 @@ const Apikey = () => {
     setFormData({
       name: merchant.name,
       email: merchant.email,
+      password: '', // Don't pre-fill password for security
       websiteUrl: merchant.websiteUrl
     });
     setEditingId(merchant._id);
@@ -139,7 +151,7 @@ const Apikey = () => {
 
         <main className={`transition-all duration-300 flex-1 p-6 ${isSidebarOpen ? 'ml-[17%]' : 'ml-0'}`}>
           {/* Merchant Form */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-white rounded-lg border-[1x] border-gray-300 p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">
               {editingId ? 'Update Merchant' : 'Create New Merchant'}
             </h2>
@@ -168,23 +180,39 @@ const Apikey = () => {
                   />
                 </div>
               </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Website URL</label>
-                <input
-                  type="url"
-                  name="websiteUrl"
-                  value={formData.websiteUrl}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {editingId ? 'New Password (leave blank to keep current)' : 'Password'}
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required={!editingId}
+                    minLength={6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Website URL</label>
+                  <input
+                    type="url"
+                    name="websiteUrl"
+                    value={formData.websiteUrl}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
               </div>
               <div className="flex justify-end">
                 {editingId && (
                   <button
                     type="button"
                     onClick={() => {
-                      setFormData({ name: '', email: '', websiteUrl: '' });
+                      setFormData({ name: '', email: '', password: '', websiteUrl: '' });
                       setEditingId(null);
                     }}
                     className="mr-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
@@ -203,17 +231,17 @@ const Apikey = () => {
           </div>
 
           {/* Merchants Table */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg border-[1x] border-gray-300 p-6">
             <h2 className="text-xl font-semibold mb-4">Merchants</h2>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto border-[1px] border-gray-200">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Website URL</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API Key</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Website URL</th>
+                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">API Key</th>
+                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">

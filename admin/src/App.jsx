@@ -30,6 +30,7 @@ import Allpayout from './pages/cashout/Allpayout'
 import Edituser from './pages/user/Edituser'
 import Allmethod from './pages/allmethod/Allmethod'
 import Apikey from './pages/apikey/Apikey'
+import Merchantpayment from './pages/merchantpayment/Merchantpayment'
 
 const ProtectedRoute = ({ children }) => {
   // Check if user data exists in localStorage
@@ -68,7 +69,11 @@ const App = () => {
             <Userlist />
           </ProtectedRoute>
         }/>
-        
+          <Route exact path="/dashboard/merchant-payment" element={
+          <ProtectedRoute>
+            <Merchantpayment />
+          </ProtectedRoute>
+        }/>
         <Route exact path="/dashboard/view-agents/:id" element={
           <ProtectedRoute>
             <Viewuser />

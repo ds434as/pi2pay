@@ -845,6 +845,7 @@ Adminroute.delete("/forward-sms/:id",async(req,res)=>{
 // ----------------total-analytics--------------------------------
 const moment = require('moment');
 const Merchantkey = require('../Models/Merchantkey');
+const MerchantPaymentRequest = require('../Models/MerchantPaymentRequest');
 
 Adminroute.get('/analytics', async (req, res) => {
   try {
@@ -1301,16 +1302,30 @@ Adminroute.get('/analytics', async (req, res) => {
 // POST - Create new merchant
 Adminroute.post('/merchant-key', async (req, res) => {
   try {
-    const { name, email, websiteUrl } = req.body;
+    const { name, email, password, websiteUrl } = req.body;
     
+    // Validate required fields
+    if (!name || !email || !password || !websiteUrl) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+    const hashpassword=await bcrypt.hash(password,10);
+    // Create new merchant with all required fields
     const merchant = new Merchantkey({
       name,
       email,
+      password:hashpassword, // This will be hashed by the pre-save hook
       websiteUrl
+      // apiKey and createdAt will be automatically generated
     });
 
     await merchant.save();
     
+    // Return response without the hashed password
     res.status(201).json({
       message: 'Merchant created successfully',
       merchant: {
@@ -1318,17 +1333,24 @@ Adminroute.post('/merchant-key', async (req, res) => {
         name: merchant.name,
         email: merchant.email,
         websiteUrl: merchant.websiteUrl,
-        apiKey: merchant.apiKey
+        apiKey: merchant.apiKey,
+        createdAt: merchant.createdAt
       }
     });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(400).json({ error: 'Email or API key already exists' });
+      // Handle duplicate email or apiKey
+      const field = err.message.includes('email') ? 'Email' : 'API key';
+      return res.status(400).json({ error: `${field} already exists` });
     }
+    if (err.name === 'ValidationError') {
+      // Handle mongoose validation errors
+      return res.status(400).json({ error: err.message });
+    }
+    console.error('Error creating merchant:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
-
 // PUT - Update merchant by ID
 Adminroute.put('/merchant-key/:id', async (req, res) => {
   try {
@@ -1389,4 +1411,153 @@ Adminroute.get('/merchant-key', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+// ------------------------merchant-payment---------------------
+// Get all payment requests
+// Get all payment requests with pagination
+Adminroute.get('/merchant-payment', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get total count of documents
+    const total = await MerchantPaymentRequest.countDocuments();
+
+    // Get paginated data
+    const requests = await MerchantPaymentRequest.find()
+      .sort({ createdAt: -1 }) // Sort by newest first
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      success: true,
+      count: requests.length,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: requests
+    });
+  } catch (err) {
+    console.error('Error fetching merchant payments:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error: ' + err.message
+    });
+  }
+});
+
+// Get single payment request by ID
+Adminroute.get('/merchant-payment/:id', async (req, res) => {
+  try {
+    const request = await MerchantPaymentRequest.findById(req.params.id)
+      .populate('merchantId', '-__v');
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        error: 'No payment request found with that ID'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: request
+    });
+  } catch (err) {
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        error: 'No payment request found with that ID'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      error: 'Server Error: ' + err.message
+    });
+  }
+});
+
+// Delete a payment request
+Adminroute.delete('/merchant-payment/:id', async (req, res) => {
+  try {
+    const request = await MerchantPaymentRequest.findByIdAndDelete(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        error: 'No payment request found with that ID'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {}
+    });
+  } catch (err) {
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        error: 'No payment request found with that ID'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      error: 'Server Error: ' + err.message
+    });
+  }
+});
+
+// Update payment request status
+Adminroute.patch('/merchant-payment/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!status || !['pending', 'completed', 'failed', 'cancelled'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide a valid status (pending, completed, failed, cancelled)'
+      });
+    }
+
+    const request = await MerchantPaymentRequest.findByIdAndUpdate(
+      req.params.id,
+      { 
+        status,
+        updatedAt: Date.now()
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        error: 'No payment request found with that ID'
+      });
+    }
+   const matchedpayment=await MerchantPaymentRequest.findOne({_id:req.params.id});
+   const merchant=await Merchantkey.findById({_id:matchedpayment.merchantId});
+   if(status=="completed"){
+       merchant.balance+=matchedpayment.amount;
+       merchant.save();
+   }
+    res.json({
+      success: true,
+      data: request
+    });
+  } catch (err) {
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        error: 'No payment request found with that ID'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      error: 'Server Error: ' + err.message
+    });
+  }
+});
+
+
+
 module.exports = Adminroute;

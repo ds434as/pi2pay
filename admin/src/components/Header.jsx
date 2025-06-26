@@ -57,7 +57,7 @@ const navigate = useNavigate();
       {/* Left Side Logo + Menu */}
       <div className="logo flex justify-start items-center gap-[20px] w-full ">
         <NavLink to="/dashboard" className='md:flex justify-start items-center gap-[10px] hidden md:w-[25%] lg:w-[20%] xl:w-[14%]'>
-          <img className=' h-[40px]' src={logo} alt="logo" />
+          <h1 className='text-[22px] font-[800] text-blue-700'>NagodPay</h1>
         </NavLink>
         <div className="menu text-[25px] cursor-pointer text-white" onClick={toggleSidebar}>
           <HiOutlineMenuAlt2 />

@@ -16,6 +16,7 @@ const PayinTransactionSchema = new mongoose.Schema(
     redirectUrl: String,
     callbackUrl: String,
     sentCallbackDate: Date,
+    merchantid:String,
     userid:String,
     currency: {
       type: String,

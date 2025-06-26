@@ -19,14 +19,32 @@ import Checkout from "../pages/checkout/Checkout";
 import Payoutrequest from "../pages/payout/Payoutrequest";
 import Payoutreports from "../pages/salesreport/Payoutreports";
 import Apidocs from "../pages/Apidocs";
+import MerchantLogin from "../pages/merchant/MerchantLogin";
+import Merchantlayout from "../layout/Merchantlayout";
+import Mdashboard from "../pages/merchant/mdashboard/Mdashboard";
+import Mpayment from "../pages/merchant/mpayment/Mpayment";
+import Masterprofile from "../pages/merchant/masterprofile/Masterprofile";
+import Masterpayin from "../pages/merchant/masterpayin/Masterpayin";
+import Masterpayout from "../pages/merchant/masterpayout/Masterpayout";
 
 const isAuthenticated = () => {
   return localStorage.getItem('authToken') !== null;
 };
 
+const isMerchantAuthenticated = () => {
+  return localStorage.getItem('merchantData') !== null;
+};
+
 const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+const MerchantProtectedRoute = ({ children }) => {
+  if (!isMerchantAuthenticated()) {
+    return <Navigate to="/merchant-login" replace />;
   }
   return children;
 };
@@ -38,22 +56,59 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+const MerchantPublicRoute = ({ children }) => {
+  if (isMerchantAuthenticated()) {
+    return <Navigate to="/merchant" replace />;
+  }
+  return children;
+};
+
 const router = createBrowserRouter([
   {
     path: "/login",
     element: <PublicRoute><Login /></PublicRoute>
   },
   {
+    path: "/merchant-login",
+    element: <MerchantPublicRoute><MerchantLogin /></MerchantPublicRoute>
+  },
+  {
     path: "/registration",
     element: <PublicRoute><Registration /></PublicRoute>
   },
-    {
+  {
     path: "/payment/docs",
     element: <Apidocs />
   },
-    {
+  {
     path: "/checkout/:paymentId",
     element: <Checkout />
+  },
+  {
+    path: "/merchant",
+    element: <MerchantProtectedRoute><Merchantlayout /></MerchantProtectedRoute>,
+    children: [
+      {
+        path: "/merchant",
+        element: <Mdashboard />
+      },
+      {
+        path: "/merchant/payment-request",
+        element: <Mpayment />
+      },
+      {
+        path: "/merchant/profile",
+        element: <Masterprofile />
+      },
+      {
+        path: "/merchant/payin",
+        element: <Masterpayin />
+      },
+      {
+        path: "/merchant/payout",
+        element: <Masterpayout />
+      }
+    ]
   },
   {
     path: "/",
@@ -87,11 +142,11 @@ const router = createBrowserRouter([
         path: "/prepayment-history",
         element: <Prepaymenthistory />
       },
-           { 
+      { 
         path: "/payout-request",
         element: <Payoutrequest />
       },
-          { 
+      { 
         path: "/payout-reports",
         element: <Payoutreports />
       },
@@ -111,7 +166,7 @@ const router = createBrowserRouter([
         path: "/bank-accounts",
         element: <Bankaccount />
       },
-          {
+      {
         path: "/bank-account/:id",
         element: <Viewbankaccount />
       },
@@ -119,7 +174,6 @@ const router = createBrowserRouter([
         path: "/applied-commission",
         element: <Commissions />
       },
-   
     ]
   }
 ]);

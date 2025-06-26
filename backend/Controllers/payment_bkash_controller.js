@@ -5,6 +5,7 @@ const { nanoid } = require('nanoid');
 const crypto = require('crypto');
 const UserModel = require("../Models/User.js");
 const BankAccount = require("../Models/BankAccount.js");
+const Merchantkey = require("../Models/Merchantkey.js");
 const { sign } = crypto;
 
 
@@ -76,6 +77,7 @@ const payment_bkash = async (req, res) => {
   console.log("pass-condition-1");
 
   try {
+    
     const payinTransaction = await PayinTransaction.findOne({
       orderId: data.orderId,
     });
@@ -88,7 +90,11 @@ const payment_bkash = async (req, res) => {
         message: "Transaction with duplicated order id, " + data.orderId + "."
       });  
     }
-
+      // ---------------------------matched-merchant------------------
+    const matched_merchant=await Merchantkey.findOne({apiKey:apiKey});
+    if(!matched_merchant){
+      return res.send({success:false,message:"Wrong merchant api key!"})
+    }
     // Account selection logic
     let provoder_name = 'Bkash P2C'; // Since this is the bkash payment function
     
@@ -193,7 +199,8 @@ const payment_bkash = async (req, res) => {
         callbackUrl: data.callbackUrl,
         referenceId,
         submitDate: new Date(),
-        paymentType: 'p2c'
+        paymentType: 'p2c',
+        merchantid:matched_merchant._id
       }); 
 
       return res.status(200).json({
@@ -292,7 +299,11 @@ const payment_bkash = async (req, res) => {
       matched_user.providercost+=comissionmoney;
       matched_user.totalpayment+=forwardedSms.transactionAmount;
       matched_user.save();
-
+   //  ------------------merchant---------------------
+      const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
+      merchant_info.balance-=transaction.expectedAmount;
+      merchant_info.total_payin+=transaction.expectedAmount;
+      merchant_info.save();
 
         } else if (executeObj.data.transactionStatus === 'Pending Authorized') {
           transaction_status = 'pending';

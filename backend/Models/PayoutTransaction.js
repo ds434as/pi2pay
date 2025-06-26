@@ -37,6 +37,7 @@ const PayoutTransactionSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
+        merchantid:String,
     requestAmount: {
       type: Number,
       required: true,

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.png';
+import logo from '../../assets/transaction.png';
 
-const Login = () => {
+const MerchantLogin = () => {
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ 
@@ -67,7 +67,7 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const response = await axios.post(`${base_url}/auth/login`, {
+      const response = await axios.post(`${base_url}/api/merchant/login`, {
         email: formData.email,
         password: formData.password
       }, {
@@ -76,18 +76,18 @@ const Login = () => {
         }
       });
 
-      const { success, message, token, user ,merchant} = response.data;
+      const { success, message, token, merchant } = response.data;
 
       if (success) {
         toast.success('Login successful!');
         
-        // Store token and user data
-        localStorage.setItem('authToken', token);
-        localStorage.setItem('userData', JSON.stringify(merchant));
+        // Store token and merchant data
+        localStorage.setItem('merchantToken', token);
+        localStorage.setItem('merchantData', JSON.stringify(merchant));
         
-        // Redirect to dashboard
+        // Redirect to merchant dashboard
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate('/merchant');
         }, 1000);
       } else {
         toast.error(message || 'Login failed. Please try again.');
@@ -133,11 +133,11 @@ const Login = () => {
         )}
 
         <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 mb-4 rounded-full bg-white border-2 border-theme flex items-center justify-center shadow-sm">
+          <div className="w-24 h-24 mb-4 rounded-full bg-white border-2 border-blue-600 flex items-center justify-center shadow-sm">
             <img src={logo} alt="Logo" className="w-16" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Welcome Back</h1>
-          <p className="text-gray-500 mt-1">Sign in to your account</p>
+          <h1 className="text-2xl font-bold text-gray-800">Merchant Login</h1>
+          <p className="text-gray-500 mt-1">Sign in to your merchant account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -149,13 +149,13 @@ const Login = () => {
               type="email"
               id="email"
               name="email"
-              placeholder="Enter your email"
+              placeholder="Enter your merchant email"
               value={formData.email}
               onChange={handleChange}
               className={`w-full px-4 py-3 rounded-lg border ${
                 errors.email ? 'border-red-500' : 'border-gray-300'
               } focus:outline-none focus:ring-2 ${
-                errors.email ? 'focus:ring-red-500' : 'focus:ring-theme'
+                errors.email ? 'focus:ring-red-500' : 'focus:ring-blue-600'
               } transition duration-200`}
               disabled={loading}
             />
@@ -172,7 +172,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-xs text-theme hover:underline focus:outline-none"
+                className="text-xs text-blue-600 hover:underline focus:outline-none"
                 disabled={loading}
               >
                 {showPassword ? 'Hide' : 'Show'} Password
@@ -188,7 +188,7 @@ const Login = () => {
               className={`w-full px-4 py-3 rounded-lg border ${
                 errors.password ? 'border-red-500' : 'border-gray-300'
               } focus:outline-none focus:ring-2 ${
-                errors.password ? 'focus:ring-red-500' : 'focus:ring-theme'
+                errors.password ? 'focus:ring-red-500' : 'focus:ring-blue-600'
               } transition duration-200`}
               disabled={loading}
             />
@@ -199,7 +199,7 @@ const Login = () => {
 
           <button
             type="submit"
-            className={`w-full py-3 px-4 bg-theme cursor-pointer hover:bg-green-700 text-white font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 ${
+            className={`w-full py-3 px-4 bg-blue-600 cursor-pointer hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 ${
               loading ? 'opacity-80 cursor-not-allowed' : ''
             }`}
             disabled={loading}
@@ -217,18 +217,26 @@ const Login = () => {
             )}
           </button>
         </form>
-
+{/* 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
+            Don't have a merchant account?{' '}
             <Link 
-              to="/registration" 
+              to="/merchant/register" 
               className="font-medium text-theme hover:underline"
             >
-              Create one now
+              Register as merchant
             </Link>
           </p>
-        </div>
+          <p className="text-sm text-gray-600 mt-2">
+            <Link 
+              to="/forgot-password" 
+              className="font-medium text-theme hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </p>
+        </div> */}
       </div>
 
       <style>{`
@@ -250,4 +258,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default MerchantLogin;
