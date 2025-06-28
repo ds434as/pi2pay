@@ -174,10 +174,11 @@ const Payoutrequest = () => {
           title: 'Update Success',
           text: `${response.data.message}`,
         });
+          handleResendCallback(currentRequest.paymentid);
         
         // Only resend callback if status is changed to success
         if (status === "success") {
-          handleResendCallback(currentRequest.transactionId);
+          handleResendCallback(currentRequest.paymentid);
         } else {
           fetchWithdrawalRequests();
         }

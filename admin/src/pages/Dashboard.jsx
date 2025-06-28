@@ -617,7 +617,7 @@ const Dashboard = () => {
                   ))
                 ) : (
                   <div className="text-center py-8">
-                    <FiFileAlt className="mx-auto text-gray-300 text-3xl mb-2" />
+                    <FiCheckCircle className="mx-auto text-gray-300 text-3xl mb-2" />
                     <p className="text-gray-500">No payin accounts data</p>
                   </div>
                 )}

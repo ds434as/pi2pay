@@ -106,7 +106,7 @@ Paymentrouter.post("/payment",async(req, res)=>{
       message: "Payment link created.",
       orderId: data.orderId,
       paymentId,
-      link: `https://pi2payz.com/checkout/${paymentId}`,
+      link: `http://localhost:5175/checkout/${paymentId}`,
     });
   } catch (error) {
     console.log(error)
@@ -136,10 +136,19 @@ Paymentrouter.post("/payout", async (req, res) => {
 
   try {
       // ---------------------------matched-merchant------------------
-    const matched_merchant=await Merchantkey.findOne({apiKey:apiKey});
-    if(!matched_merchant){
-      return res.send({success:false,message:"Wrong merchant api key!"})
-    }
+// ---------------------------matched-merchant------------------
+const matched_merchant = await Merchantkey.findOne({ apiKey: apiKey });
+if (!matched_merchant) {
+  return res.send({ success: false, message: "Wrong merchant api key!" });
+}
+
+// Check if merchant has sufficient balance (balance should be > 25000 + transaction amount)
+if (matched_merchant.balance <= 25000 + data.amount) {
+  return res.send({ 
+    success: false, 
+    message: "Insufficient merchant balance! Minimum required: " + (25000 + data.amount) 
+  });
+}
     // Find all agent users with balance >= payout amount
     const eligibleAgents = await UserModel.find({
       is_admin:false,
@@ -479,7 +488,7 @@ Paymentrouter.post("/paymentSubmit",  async (req, res) => {
 
       //  ------------------merchant---------------------
       const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
-      merchant_info.balance-=forwardedSms.transactionAmount;
+      merchant_info.balance+=forwardedSms.transactionAmount;
       merchant_info.total_payin+=forwardedSms.transactionAmount;
       merchant_info.save();
       //  ------------------update-agent-------------------
@@ -638,12 +647,12 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
       forwardedSms.status = "used";
       await forwardedSms.save();
       const bankaccount=await BankAccount.findOne({accountNumber:forwardedSms.agentAccount});
-      bankaccount.total_payoutno+=1;
-      bankaccount.total_cashout+=forwardedSms.transactionAmount;
-      bankaccount.save();
+      // bankaccount.total_payoutno+=1;
+      // bankaccount.total_cashout+=forwardedSms.transactionAmount;
+      // bankaccount.save();
          //  ------------------merchant---------------------
       const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
-      merchant_info.balance+=forwardedSms.transactionAmount;
+      merchant_info.balance-=forwardedSms.transactionAmount;
       merchant_info.total_payout+=forwardedSms.transactionAmount;
       merchant_info.save();
     }
@@ -705,7 +714,7 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
     res.json({ success: true, message: "Status updated successfully!" });
 
   } catch (e) {
-    res.status(400).json({
+    res.json({
       success: false,
       error: e.message,
     });
@@ -715,14 +724,14 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
 // Paymentrouter.post("/resendCallbackPayment", resend_callback_payment);
 Paymentrouter.post("/resendCallbackPayout", async (req, res) => {
   const {payment_id } = req.body;
-
+  console.log("callllbakx")
   if (!payment_id) {
     return res.status(400).json({ message: 'Please check all fields' });
   }
   console.log(req.body)
   try {
-        const transaction = await PayoutTransaction.findOne({paymentId:payment_id});
-    if (!transaction) throw Error('Transaction does not exists');
+        const transaction = await PayoutTransaction.findOne({paymentId:req.body.payment_id});
+       console.log("sdsdd",transaction)
 
     let result = {
       success: true,
@@ -730,10 +739,8 @@ Paymentrouter.post("/resendCallbackPayout", async (req, res) => {
 
     if (transaction.callbackUrl) {
       
-      const merchant = await User.findOne({name: transaction.merchant, role: 'merchant'});
-      if (!merchant) throw Error('Merchant does not exists for callback');
 
-      const hash = generate256Hash(transaction.paymentId + transaction.orderId + transaction.sentAmount.toString() + transaction.currency + merchant.apiKey);
+      const hash = generate256Hash(transaction.paymentId + transaction.orderId + transaction.sentAmount.toString() + transaction.currency);
 
       let payload = {
         paymentId: transaction.paymentId,
@@ -769,7 +776,7 @@ Paymentrouter.post("/resendCallbackPayout", async (req, res) => {
 
   } catch (e) {
     console.log(e)
-    res.status(400).json({ 
+    res.status(500).json({ 
       success: false,
       error: e.message 
     });

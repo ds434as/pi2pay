@@ -8,6 +8,7 @@ const Merchantkey = require('../Models/Merchantkey');
 const MerchantPaymentRequest = require('../Models/MerchantPaymentRequest');
 const PayinTransaction = require('../Models/PayinTransaction');
 const PayoutTransaction = require('../Models/PayoutTransaction');
+const { v4: uuidv4 } = require('uuid');
 
 // Middleware to protect routes
 const protect = async (req, res, next) => {
@@ -46,7 +47,7 @@ const generateToken = (id) => {
 // @access  Public
 Merchantrouter.post('/login', async (req, res) => {
   const { email, password } = req.body;
-
+ console.log(req.body)
   // Basic validation
   if (!email || !password) {
     return res.status(400).json({success:false,message: 'Please provide email and password' });
@@ -60,14 +61,15 @@ Merchantrouter.post('/login', async (req, res) => {
   try {
     // Check if merchant exists
     const merchant = await Merchantkey.findOne({ email });
+    console.log(merchant)
     if (!merchant) {
-      return res.status(401).json({success:false, message: 'Invalid credentials' });
+      return res.json({success:false, message: 'Invalid credentials' });
     }
 
     // Check password
     const isMatch = await bcrypt.compare(password, merchant.password);
     if (!isMatch) {
-      return res.status(401).json({success:false,message: 'Invalid credentials' });
+      return res.json({success:false,message: 'Invalid credentials' });
     }
 
     // Generate token
@@ -170,13 +172,15 @@ Merchantrouter.post('/merchant-payment-request', protect, async (req, res) => {
   }
 
   try {
-    const paymentRequest = new MerchantPaymentRequest({
-      merchantId: req.merchant._id,
-      email,
-      name,
-      amount,
-      provider,
-    });
+const paymentRequest = new MerchantPaymentRequest({
+  merchantId: req.merchant._id,
+  email,
+  name,
+  amount,
+  provider,
+  referenceId: uuidv4(), // <-- generate unique value
+});
+
 
     await paymentRequest.save();
 

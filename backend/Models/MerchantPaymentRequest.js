@@ -42,6 +42,12 @@ const MerchantPaymentRequestSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  referenceId: {
+  type: String,
+  unique: true,
+  required: true,
+},
+
 });
 
 

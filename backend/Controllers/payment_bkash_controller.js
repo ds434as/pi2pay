@@ -295,7 +295,7 @@ const payment_bkash = async (req, res) => {
           find_account.total_recieved+=transaction.expectedAmount;
           find_account.save();
           const comissionmoney=(transaction.expectedAmount/100)*matched_user.depositcommission;
-      matched_user.balance-=forwardedSms.transactionAmount;
+      matched_user.balance+=forwardedSms.transactionAmount;
       matched_user.providercost+=comissionmoney;
       matched_user.totalpayment+=forwardedSms.transactionAmount;
       matched_user.save();
