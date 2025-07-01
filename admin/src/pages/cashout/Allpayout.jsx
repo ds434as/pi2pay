@@ -317,10 +317,10 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                               {transaction._id}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {transaction.amount} {transaction.currency}
+                              {transaction.requestAmount} {transaction.currency}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {transaction.recipient || 'N/A'}
+                              {transaction.payeeAccount || 'N/A'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <StatusBadge status={transaction.status} />
@@ -440,7 +440,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-500">Amount</label>
                 <p className="mt-1 text-sm text-gray-900">
-                  {currentTransaction.amount} {currentTransaction.currency}
+                  {currentTransaction.requestAmount} {currentTransaction.currency}
                 </p>
               </div>
               <div>
@@ -451,7 +451,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-500">Recipient</label>
-                <p className="mt-1 text-sm text-gray-900">{currentTransaction.recipient || 'N/A'}</p>
+                <p className="mt-1 text-sm text-gray-900">{currentTransaction.payeeAccount || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-500">Created At</label>
@@ -470,7 +470,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
               <button
                 type="button"
                 onClick={() => setShowViewModal(false)}
-                className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-transparent rounded-md hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+                className="inline-flex justify-center cursor-pointer px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-transparent rounded-md hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
               >
                 Close
               </button>

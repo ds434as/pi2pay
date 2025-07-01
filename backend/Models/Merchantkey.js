@@ -45,6 +45,16 @@ const merchantSchema = new mongoose.Schema({
   total_payout:{
     type:Number,
     default:0,
+  },
+    withdrawCommission: {
+    type: Number,
+  },
+  depositCommission: {
+    type: Number,
+  },
+  getwaycost:{
+    type: Number,
+    default: 0
   }
 });
 

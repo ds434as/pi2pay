@@ -4,7 +4,8 @@ import Sidebar from '../../components/Sidebar';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { FaEye, FaEdit, FaTrash, FaToggleOn, FaToggleOff, FaSearch, FaTimes } from 'react-icons/fa';
-import {NavLink} from "react-router-dom"
+import { NavLink } from "react-router-dom";
+
 const Userlist = () => {
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -27,10 +28,11 @@ const Userlist = () => {
   const [statusFormData, setStatusFormData] = useState({
     withdrawCommission: '',
     depositCommission: '',
-    paymentMethod: '',
+    paymentMethod: [],
     paymentBrand: '',
     status: ''
   });
+
   const [statusFormErrors, setStatusFormErrors] = useState({
     withdrawCommission: '',
     depositCommission: '',
@@ -84,7 +86,6 @@ const Userlist = () => {
         console.error('Error fetching users:', error);
         setLoading(false);
         
-        // Handle unauthorized access
         if (error.response?.status === 401) {
           Swal.fire({
             icon: 'error',
@@ -126,8 +127,8 @@ const Userlist = () => {
     setStatusFormData({
       withdrawCommission: user.withdracommission || '',
       depositCommission: user.depositcommission || '',
-      paymentMethod: user.paymentMethod || '',
-      paymentBrand: user.paymentBrand || '',
+      paymentMethod: Array.isArray(user.paymentMethod) ? user.paymentMethod : [],
+      paymentBrand: user.paymentbrand || '',
       status: newStatus
     });
     
@@ -157,12 +158,26 @@ const Userlist = () => {
         [name]: ''
       }));
     }
-    
-    // Reset payment brand when payment method changes
-    if (name === 'paymentMethod') {
-      setStatusFormData(prev => ({
+  };
+
+  // Handle payment method checkbox change
+  const handlePaymentMethodChange = (method, isChecked) => {
+    setStatusFormData(prev => {
+      const newMethods = isChecked
+        ? [...prev.paymentMethod, method]
+        : prev.paymentMethod.filter(m => m !== method);
+      
+      return {
         ...prev,
-        paymentBrand: ''
+        paymentMethod: newMethods
+      };
+    });
+
+    // Clear error when field changes
+    if (statusFormErrors.paymentMethod) {
+      setStatusFormErrors(prev => ({
+        ...prev,
+        paymentMethod: ''
       }));
     }
   };
@@ -207,9 +222,9 @@ const Userlist = () => {
       valid = false;
     }
     
-    // Validate payment method
-    if (!statusFormData.paymentMethod) {
-      newErrors.paymentMethod = 'Payment method is required';
+    // Validate at least one payment method is selected
+    if (statusFormData.paymentMethod.length === 0) {
+      newErrors.paymentMethod = 'At least one payment method is required';
       valid = false;
     }
     
@@ -251,7 +266,7 @@ const Userlist = () => {
           withdracommission: statusFormData.withdrawCommission,
           depositcommission: statusFormData.depositCommission,
           paymentMethod: statusFormData.paymentMethod,
-          paymentBrand: statusFormData.paymentBrand
+          paymentbrand: statusFormData.paymentBrand
         } : user
       ));
       
@@ -442,34 +457,28 @@ const Userlist = () => {
                   <thead className="bg-gray-50 text-nowrap ">
                     <tr>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-[600] text-gray-500 uppercase tracking-wider">Name</th>
-                      {/* <th scope="col" className="px-6 py-3 text-left text-xs font-[600] text-gray-500 uppercase tracking-wider">Email</th> */}
                       <th scope="col" className="px-6 py-3 text-left text-xs font-[600] text-gray-500 uppercase tracking-wider">Balance</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-[600] text-gray-500 uppercase tracking-wider">Total Wallet</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-[600] text-gray-500 uppercase tracking-wider">Withdraw Commissions</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-[600] text-gray-500 uppercase tracking-wider">Deposit Commissions</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-[600] text-gray-500 uppercase tracking-wider">Status</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-[600] text-gray-500 uppercase tracking-wider">Joined</th>
-                      
                       <th scope="col" className="px-6 py-3 text-right text-xs font-[600] text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredUsers.length > 0 ? (
                       filteredUsers.map((user) => {
-                        // Get the first letter of the name
                         const firstLetter = user.name.charAt(0).toUpperCase();
                         
-                        // Determine background color based on the first letter
                         const getBackgroundColor = (letter) => {
                           const charCode = letter.charCodeAt(0);
-                          
-                          // Color ranges based on character code
-                          if (charCode >= 65 && charCode <= 70) return 'bg-blue-600 text-white';   // A-F
-                          if (charCode >= 71 && charCode <= 75) return 'bg-green-600 text-white'; // G-K
-                          if (charCode >= 76 && charCode <= 80) return 'bg-purple-600 text-white'; // L-P
-                          if (charCode >= 81 && charCode <= 85) return 'bg-orange-600 text-white'; // Q-U
-                          if (charCode >= 86 && charCode <= 90) return 'bg-pink-600 text-white';    // V-Z
-                          return 'bg-gray-100 text-gray-600'; // Default
+                          if (charCode >= 65 && charCode <= 70) return 'bg-blue-600 text-white';
+                          if (charCode >= 71 && charCode <= 75) return 'bg-green-600 text-white';
+                          if (charCode >= 76 && charCode <= 80) return 'bg-purple-600 text-white';
+                          if (charCode >= 81 && charCode <= 85) return 'bg-orange-600 text-white';
+                          if (charCode >= 86 && charCode <= 90) return 'bg-pink-600 text-white';
+                          return 'bg-gray-100 text-gray-600';
                         };
                         
                         const avatarClass = `flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center font-semibold ${getBackgroundColor(firstLetter)}`;
@@ -512,22 +521,21 @@ const Userlist = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                               <div className="flex justify-end space-x-2">
                                 <NavLink to={`/dashboard/view-agents/${user._id}`}>
-         <button
-                                  className="p-2 text-white cursor-pointer bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                                  title="View"
-                                >
-                                  <FaEye className="w-4 h-4" />
-                                </button>
+                                  <button
+                                    className="p-2 text-white cursor-pointer bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    title="View"
+                                  >
+                                    <FaEye className="w-4 h-4" />
+                                  </button>
                                 </NavLink>
-                                         <NavLink to={`/dashboard/edit-agents/${user._id}`}>
-                   <button
-                                  className="p-2 text-white cursor-pointer bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
-                                  title="Edit"
-                                >
-                                  <FaEdit className="w-4 h-4" />
-                                </button>
+                                <NavLink to={`/dashboard/edit-agents/${user._id}`}>
+                                  <button
+                                    className="p-2 text-white cursor-pointer bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+                                    title="Edit"
+                                  >
+                                    <FaEdit className="w-4 h-4" />
+                                  </button>
                                 </NavLink>
-                   
                                 <button
                                   onClick={() => handleDeleteUser(user._id)}
                                   className="p-2 text-white bg-red-600 cursor-pointer rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
@@ -542,7 +550,7 @@ const Userlist = () => {
                       })
                     ) : (
                       <tr>
-                        <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                        <td colSpan="8" className="px-6 py-4 text-center text-gray-500">
                           {searchTerm ? 'No matching users found' : 'No users available'}
                         </td>
                       </tr>
@@ -583,7 +591,7 @@ const Userlist = () => {
                       name="withdrawCommission"
                       value={statusFormData.withdrawCommission}
                       onChange={handleStatusFormChange}
-                      className={`w-full p-2 border  outline-blue-500 ${statusFormErrors.withdrawCommission ? 'border-red-500' : 'border-gray-300'} rounded-lg`}
+                      className={`w-full p-2 border outline-blue-500 ${statusFormErrors.withdrawCommission ? 'border-red-500' : 'border-gray-300'} rounded-lg`}
                       placeholder="Enter withdraw commission"
                     />
                     {statusFormErrors.withdrawCommission && (
@@ -610,45 +618,51 @@ const Userlist = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Payment Method
+                      Payment Methods
                     </label>
-                    <select
-                      name="paymentMethod"
-                      value={statusFormData.paymentMethod}
-                      onChange={handleStatusFormChange}
-                      className={`w-full p-2 border outline-blue-500 ${statusFormErrors.paymentMethod ? 'border-red-500' : 'border-gray-300'} rounded-lg `}
-                    >
-                      <option value="">Select Payment Method</option>
+                    <div className="space-y-2">
                       {paymentMethods.map(method => (
-                        <option key={method} value={method}>{method}</option>
+                        <div key={method} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`method-${method}`}
+                            checked={statusFormData.paymentMethod.includes(method)}
+                            onChange={(e) => handlePaymentMethodChange(method, e.target.checked)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor={`method-${method}`} className="ml-2 block text-sm text-gray-700">
+                            {method}
+                          </label>
+                        </div>
                       ))}
-                    </select>
+                    </div>
                     {statusFormErrors.paymentMethod && (
                       <p className="mt-1 text-sm text-red-600">{statusFormErrors.paymentMethod}</p>
                     )}
                   </div>
 
-                  {statusFormData.paymentMethod && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Payment Brand
-                      </label>
-                      <select
-                        name="paymentBrand"
-                        value={statusFormData.paymentBrand}
-                        onChange={handleStatusFormChange}
-                        className={`w-full p-2 border outline-blue-500 ${statusFormErrors.paymentBrand ? 'border-red-500' : 'border-gray-300'} rounded-lg `}
-                      >
-                        <option value="">Select Payment Brand</option>
-                        {paymentBrands[statusFormData.paymentMethod]?.map(brand => (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Payment Brand
+                    </label>
+                    <select
+                      name="paymentBrand"
+                      value={statusFormData.paymentBrand}
+                      onChange={handleStatusFormChange}
+                      className={`w-full p-2 border outline-blue-500 ${statusFormErrors.paymentBrand ? 'border-red-500' : 'border-gray-300'} rounded-lg`}
+                      disabled={statusFormData.paymentMethod.length === 0}
+                    >
+                      <option value="">Select Payment Brand</option>
+                      {statusFormData.paymentMethod.length > 0 && 
+                        paymentBrands[statusFormData.paymentMethod[0]]?.map(brand => (
                           <option key={brand} value={brand}>{brand}</option>
-                        ))}
-                      </select>
-                      {statusFormErrors.paymentBrand && (
-                        <p className="mt-1 text-sm text-red-600">{statusFormErrors.paymentBrand}</p>
-                      )}
-                    </div>
-                  )}
+                        ))
+                      }
+                    </select>
+                    {statusFormErrors.paymentBrand && (
+                      <p className="mt-1 text-sm text-red-600">{statusFormErrors.paymentBrand}</p>
+                    )}
+                  </div>
 
                   <div className="mt-6">
                     <label className="block text-sm font-medium text-gray-700 mb-1">

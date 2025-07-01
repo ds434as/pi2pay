@@ -286,76 +286,144 @@ if (matched_merchant.balance <= 25000 + data.amount) {
     });
   }
 });
+
 Paymentrouter.post("/checkout", async (req, res) => {
     const { paymentId } = req.body;
-    const apiKey = req.headers['x-api-key']?req.headers['x-api-key']:'';
-    console.log(apiKey)
-    // const matched_api=await Merchantkey.findOne({apiKey:apiKey});
-    // if(!matched_api){
-    //   return res.send({success:false,message:"Merchnat Key Not Found."})
-    // }
-    const data = req.body;
-    console.log('bkash-payment-data', req.body.paymentId);
+    const apiKey = req.headers['x-api-key'] ? req.headers['x-api-key'] : '';
     
     try {
         // 1. Find the payment transaction
         const match_payment = await PayinTransaction.findOne({ paymentId });
         if (!match_payment) {
+            console.log(`Payment ID ${paymentId} not found`);
             return res.status(404).send({ success: false, message: "Payment ID not found!" });
         }
 
         const expectedAmount = Number(match_payment.expectedAmount || 0);
-        console.log("Expected Amount:", expectedAmount);
-        let provoder_name;
-        if(match_payment.provider === 'bkash'){
-            provoder_name = 'Bkash P2P';
-        }else if(match_payment.provider === 'nagad'){
-            provoder_name = 'Nagad P2P';
+        const requiredBalance = 50000 + expectedAmount;
+        console.log(`Required Balance: ${requiredBalance} (50000 + ${expectedAmount})`);
+        
+        let provider_name;
+        if (match_payment.provider === 'bkash') {
+            provider_name = 'Bkash P2P';
+        } else if (match_payment.provider === 'nagad') {
+            provider_name = 'Nagad P2P';
+        } else {
+            console.log(`Unsupported provider: ${match_payment.provider}`);
+            return res.status(400).send({ success: false, message: "Unsupported payment provider" });
         }
-        console.log(provoder_name)
- // 2. Find eligible users with sufficient balance (balance >= 50000 + expectedAmount) and at least one agent account
-const eligibleUsers = await UserModel.find({
-    balance: { $gte: 50000 + expectedAmount }, // Balance must be at least 50,000 + expectedAmount
-    'agentAccounts.0': { $exists: true }, // Has at least one agent account
-    status: 'active', // Only active users
-    paymentMethod: provoder_name
-});
+
+        console.log("Looking for provider:", provider_name);
+
+        // 2. Find eligible users with sufficient balance (50000 + expectedAmount) and active agent accounts
+        const eligibleUsers = await UserModel.aggregate([
+            {
+                $match: {
+                    balance: { $gte: requiredBalance },
+                    status: 'active',
+                    paymentMethod: { $in: [provider_name] }
+                }
+            },
+            {
+                $lookup: {
+                    from: "bankaccounts",
+                    let: { userId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$user_id", "$$userId"] },
+                                status: 'active',
+                                provider: provider_name
+                            }
+                        }
+                    ],
+                    as: "activeAccounts"
+                }
+            },
+            {
+                $match: {
+                    "activeAccounts.0": { $exists: true }
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    username: 1,
+                    balance: 1,
+                    activeAccounts: 1,
+                    paymentMethod: 1
+                }
+            }
+        ]);
+
+        console.log(`Found ${eligibleUsers.length} eligible users with balance >= ${requiredBalance}`);
 
         if (eligibleUsers.length === 0) {
+            // Diagnostic queries to understand why no users are eligible
+            const allUsersCount = await UserModel.countDocuments({
+                paymentMethod: { $in: [provider_name] },
+                status: 'active'
+            });
+            
+            const usersWithBalance = await UserModel.countDocuments({
+                paymentMethod: { $in: [provider_name] },
+                status: 'active',
+                balance: { $gte: requiredBalance }
+            });
+            
+            const usersWithAccounts = await UserModel.countDocuments({
+                paymentMethod: { $in: [provider_name] },
+                status: 'active',
+                balance: { $gte: requiredBalance },
+                'agentAccounts.0': { $exists: true }
+            });
+
+            console.log(`Diagnostics:
+                Total users with provider ${provider_name}: ${allUsersCount}
+                Users with balance >= ${requiredBalance}: ${usersWithBalance}
+                Users with agent accounts: ${usersWithAccounts}`);
+
             return res.status(404).send({
                 success: false,
-                message: "No eligible agents found with sufficient balance"
+                message: `No eligible agents found with balance >= ${requiredBalance} and active accounts`,
+                diagnostics: {
+                    totalUsers: allUsersCount,
+                    usersWithRequiredBalance: usersWithBalance,
+                    usersWithAccounts: usersWithAccounts,
+                    requiredBalance: requiredBalance
+                }
             });
         }
 
-        // 3. Randomly select one user from the eligible users
-        const randomIndex = Math.floor(Math.random() * eligibleUsers.length);
-        const selectedAgent = eligibleUsers[randomIndex];
+        // 3. Select a random user with weights based on their balance
+        const totalBalance = eligibleUsers.reduce((sum, user) => sum + user.balance, 0);
+        let randomPoint = Math.random() * totalBalance;
+        let selectedAgent = null;
 
-        // 4. Log the selected agent for debugging
+        for (const user of eligibleUsers) {
+            randomPoint -= user.balance;
+            if (randomPoint <= 0) {
+                selectedAgent = user;
+                break;
+            }
+        }
+
+        // Fallback to simple random selection if needed
+        if (!selectedAgent) {
+            selectedAgent = eligibleUsers[Math.floor(Math.random() * eligibleUsers.length)];
+        }
+
         console.log("Selected Agent:", {
             _id: selectedAgent._id,
             username: selectedAgent.username,
             balance: selectedAgent.balance,
-            agentAccountsCount: selectedAgent.agentAccounts.length
+            activeAccounts: selectedAgent.activeAccounts.length
         });
 
-        // 5. Get all active bank accounts for the selected agent
-        const agentAccounts = await BankAccount.find({
-            user_id: selectedAgent._id,
-            status: 'active'
-        });
-
-        if (agentAccounts.length === 0) {
-            return res.status(404).send({
-                success: false,
-                message: "No active bank accounts found for the selected agent"
-            });
-        }
-
-        // 6. Randomly select one bank account
-        const randomAccountIndex = Math.floor(Math.random() * agentAccounts.length);
-        const selectedAccount = agentAccounts[randomAccountIndex];
+        // 4. Select a random active account
+        const selectedAccount = selectedAgent.activeAccounts[
+            Math.floor(Math.random() * selectedAgent.activeAccounts.length)
+        ];
 
         console.log("Selected Bank Account:", {
             provider: selectedAccount.provider,
@@ -363,23 +431,27 @@ const eligibleUsers = await UserModel.find({
             shopName: selectedAccount.shopName
         });
 
-        // Now you can proceed with the payment using the selectedAccount
-        // ... rest of your payment processing logic ...
-
-        // Example response (modify as needed)
         return res.status(200).send({
             success: true,
             message: "Agent and bank account selected successfully",
             agent: {
                 id: selectedAgent._id,
-                username: selectedAgent.username
+                username: selectedAgent.username,
+                balance: selectedAgent.balance
             },
             bankAccount: {
                 provider: selectedAccount.provider,
                 accountNumber: selectedAccount.accountNumber,
                 shopName: selectedAccount.shopName
             },
-            paymentDetails: match_payment
+            paymentDetails: {
+                paymentId: match_payment.paymentId,
+                expectedAmount: match_payment.expectedAmount,
+                provider: match_payment.provider
+            },
+            requirements: {
+                minimumRequiredBalance: requiredBalance
+            }
         });
 
     } catch (error) {
@@ -387,10 +459,289 @@ const eligibleUsers = await UserModel.find({
         return res.status(500).send({
             success: false,
             message: "An error occurred during checkout",
-            error: error.message || error
+            error: error.message
         });
     }
 });
+// Paymentrouter.post("/checkout", async (req, res) => {
+//     const { paymentId } = req.body;
+//     const apiKey = req.headers['x-api-key']?req.headers['x-api-key']:'';
+//     console.log(apiKey)
+//     // const matched_api=await Merchantkey.findOne({apiKey:apiKey});
+//     // if(!matched_api){
+//     //   return res.send({success:false,message:"Merchnat Key Not Found."})
+//     // }
+//     const data = req.body;
+//     console.log('bkash-payment-data', req.body.paymentId);
+    
+//     try {
+//         // 1. Find the payment transaction
+//         const match_payment = await PayinTransaction.findOne({ paymentId });
+//         if (!match_payment) {
+//             return res.send({ success: false, message: "Payment ID not found!" });
+//         }
+
+//         const expectedAmount = Number(match_payment.expectedAmount || 0);
+//         console.log("Expected Amount:", expectedAmount);
+//         let provoder_name;
+//         if(match_payment.provider === 'bkash'){
+//             provoder_name = 'Bkash P2P';
+//         }else if(match_payment.provider === 'nagad'){
+//             provoder_name = 'Nagad P2P';
+//         }
+//         console.log(provoder_name)
+//  // 2. Find eligible users with sufficient balance (balance >= 50000 + expectedAmount) and at least one agent account
+//     const eligibleUsers = await UserModel.find({
+//             balance: { $gte: 50000 + expectedAmount }, // Balance must be at least 50,000 + expectedAmount
+//             'agentAccounts.0': { $exists: true }, // Has at least one agent account
+//             status: 'active', // Only active users
+//             paymentMethod: { $in: [provoder_name] } // Updated to check if provoder_name is in the paymentMethod array
+//         });
+//         if (eligibleUsers.length === 0) {
+//             return res.status(404).send({
+//                 success: false,
+//                 message: "No eligible agents found with sufficient balance"
+//             });
+//         }
+
+//         // 3. Randomly select one user from the eligible users
+//         const randomIndex = Math.floor(Math.random() * eligibleUsers.length);
+//         const selectedAgent = eligibleUsers[randomIndex];
+
+//         // 4. Log the selected agent for debugging
+//         console.log("Selected Agent:", {
+//             _id: selectedAgent._id,
+//             username: selectedAgent.username,
+//             balance: selectedAgent.balance,
+//             agentAccountsCount: selectedAgent.agentAccounts.length
+//         });
+
+//         // 5. Get all active bank accounts for the selected agent
+//         const agentAccounts = await BankAccount.find({
+//             user_id: selectedAgent._id,
+//             status: 'active',
+//             provider:provoder_name
+//         });
+
+//         if (agentAccounts.length === 0) {
+//             return res.status(404).send({
+//                 success: false,
+//                 message: "No active bank accounts found for the selected agent"
+//             });
+//         }
+
+//         // 6. Randomly select one bank account
+//         const randomAccountIndex = Math.floor(Math.random() * agentAccounts.length);
+//         const selectedAccount = agentAccounts[randomAccountIndex];
+
+//         console.log("Selected Bank Account:", {
+//             provider: selectedAccount.provider,
+//             accountNumber: selectedAccount.accountNumber,
+//             shopName: selectedAccount.shopName
+//         });
+
+//         // Now you can proceed with the payment using the selectedAccount
+//         // ... rest of your payment processing logic ...
+
+//         // Example response (modify as needed)
+//         return res.status(200).send({
+//             success: true,
+//             message: "Agent and bank account selected successfully",
+//             agent: {
+//                 id: selectedAgent._id,
+//                 username: selectedAgent.username
+//             },
+//             bankAccount: {
+//                 provider: selectedAccount.provider,
+//                 accountNumber: selectedAccount.accountNumber,
+//                 shopName: selectedAccount.shopName
+//             },
+//             paymentDetails: match_payment
+//         });
+
+//     } catch (error) {
+//         console.error("Checkout error:", error);
+//         return res.status(500).send({
+//             success: false,
+//             message: "An error occurred during checkout",
+//             error: error.message || error
+//         });
+//     }
+// });
+
+
+// Paymentrouter.post("/checkout", async (req, res) => {
+//     const { paymentId } = req.body;
+//     const apiKey = req.headers['x-api-key'] ? req.headers['x-api-key'] : '';
+    
+//     try {
+//         // 1. Find the payment transaction
+//         const match_payment = await PayinTransaction.findOne({ paymentId });
+//         if (!match_payment) {
+//             console.log(`Payment ID ${paymentId} not found`);
+//             return res.status(404).send({ success: false, message: "Payment ID not found!" });
+//         }
+
+//         const expectedAmount = Number(match_payment.expectedAmount || 0);
+//         console.log("Expected Amount:", expectedAmount);
+        
+//         let provider_name;
+//         if (match_payment.provider === 'bkash') {
+//             provider_name = 'Bkash P2P';
+//         } else if (match_payment.provider === 'nagad') {
+//             provider_name = 'Nagad P2P';
+//         } else {
+//             console.log(`Unsupported provider: ${match_payment.provider}`);
+//             return res.status(400).send({ success: false, message: "Unsupported payment provider" });
+//         }
+
+//         console.log("Looking for provider:", provider_name);
+
+//         // 2. Find eligible users with sufficient balance and active agent accounts
+//         const eligibleUsers = await UserModel.aggregate([
+//             {
+//                 $match: {
+//                     balance: { $gte: expectedAmount }, // Removed the 50000 minimum for testing
+//                     status: 'active',
+//                     paymentMethod: { $in: [provider_name] }
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "bankaccounts",
+//                     let: { userId: "$_id" },
+//                     pipeline: [
+//                         {
+//                             $match: {
+//                                 $expr: { $eq: ["$user_id", "$$userId"] },
+//                                 status: 'active',
+//                                 provider: provider_name
+//                             }
+//                         }
+//                     ],
+//                     as: "activeAccounts"
+//                 }
+//             },
+//             {
+//                 $match: {
+//                     "activeAccounts.0": { $exists: true }
+//                 }
+//             },
+//             {
+//                 $project: {
+//                     _id: 1,
+//                     username: 1,
+//                     balance: 1,
+//                     activeAccounts: 1,
+//                     paymentMethod: 1
+//                 }
+//             }
+//         ]);
+
+//         console.log(`Found ${eligibleUsers.length} eligible users`);
+
+//         if (eligibleUsers.length === 0) {
+//             // Diagnostic query to understand why no users are eligible
+//             const allUsersCount = await UserModel.countDocuments({
+//                 paymentMethod: { $in: [provider_name] },
+//                 status: 'active'
+//             });
+            
+//             const usersWithBalance = await UserModel.countDocuments({
+//                 paymentMethod: { $in: [provider_name] },
+//                 status: 'active',
+//                 balance: { $gte: expectedAmount }
+//             });
+            
+//             const usersWithAccounts = await UserModel.countDocuments({
+//                 paymentMethod: { $in: [provider_name] },
+//                 status: 'active',
+//                 balance: { $gte: expectedAmount },
+//                 'agentAccounts.0': { $exists: true }
+//             });
+
+//             console.log(`Diagnostics:
+//                 Total users with provider ${provider_name}: ${allUsersCount}
+//                 Users with sufficient balance: ${usersWithBalance}
+//                 Users with agent accounts: ${usersWithAccounts}`);
+
+//             return res.status(404).send({
+//                 success: false,
+//                 message: "No eligible agents found with sufficient balance and active accounts",
+//                 diagnostics: {
+//                     totalUsers: allUsersCount,
+//                     usersWithBalance: usersWithBalance,
+//                     usersWithAccounts: usersWithAccounts
+//                 }
+//             });
+//         }
+
+//         // 3. Select a random user with weights based on their balance
+//         // This gives users with higher balance a better chance of being selected
+//         const totalBalance = eligibleUsers.reduce((sum, user) => sum + user.balance, 0);
+//         let randomPoint = Math.random() * totalBalance;
+//         let selectedAgent = null;
+
+//         for (const user of eligibleUsers) {
+//             randomPoint -= user.balance;
+//             if (randomPoint <= 0) {
+//                 selectedAgent = user;
+//                 break;
+//             }
+//         }
+
+//         // Fallback to simple random selection if something went wrong
+//         if (!selectedAgent) {
+//             selectedAgent = eligibleUsers[Math.floor(Math.random() * eligibleUsers.length)];
+//         }
+
+//         console.log("Selected Agent:", {
+//             _id: selectedAgent._id,
+//             username: selectedAgent.username,
+//             balance: selectedAgent.balance,
+//             activeAccounts: selectedAgent.activeAccounts.length
+//         });
+
+//         // 4. Select a random active account
+//         const selectedAccount = selectedAgent.activeAccounts[
+//             Math.floor(Math.random() * selectedAgent.activeAccounts.length)
+//         ];
+
+//         console.log("Selected Bank Account:", {
+//             provider: selectedAccount.provider,
+//             accountNumber: selectedAccount.accountNumber,
+//             shopName: selectedAccount.shopName
+//         });
+
+//         return res.status(200).send({
+//             success: true,
+//             message: "Agent and bank account selected successfully",
+//             agent: {
+//                 id: selectedAgent._id,
+//                 username: selectedAgent.username,
+//                 balance: selectedAgent.balance
+//             },
+//             bankAccount: {
+//                 provider: selectedAccount.provider,
+//                 accountNumber: selectedAccount.accountNumber,
+//                 shopName: selectedAccount.shopName
+//             },
+//             paymentDetails: {
+//                 paymentId: match_payment.paymentId,
+//                 expectedAmount: match_payment.expectedAmount,
+//                 provider: match_payment.provider
+//             }
+//         });
+
+//     } catch (error) {
+//         console.error("Checkout error:", error);
+//         return res.status(500).send({
+//             success: false,
+//             message: "An error occurred during checkout",
+//             error: error.message
+//         });
+//     }
+// });
 Paymentrouter.post("/paymentSubmit",  async (req, res) => {
   console.log("---payment-submit-data---");
   const { paymentId, provider, agentAccount, payerAccount, transactionId } = req.body;
@@ -488,13 +839,17 @@ Paymentrouter.post("/paymentSubmit",  async (req, res) => {
 
       //  ------------------merchant---------------------
       const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
+      const commissionsmoney=(forwardedSms.transactionAmount/100)*merchant_info.depositCommission;
       merchant_info.balance+=forwardedSms.transactionAmount;
+      merchant_info.balance-=commissionsmoney;
+      merchant_info.getwaycost+=commissionsmoney;
       merchant_info.total_payin+=forwardedSms.transactionAmount;
       merchant_info.save();
       //  ------------------update-agent-------------------
       const comissionmoney=(forwardedSms.transactionAmount/100)*matcheduser.depositcommission;
       console.log(comissionmoney)
       matcheduser.balance-=forwardedSms.transactionAmount;
+      matcheduser.balance+=comissionmoney;
       matcheduser.providercost+=comissionmoney;
       matcheduser.totalpayment+=forwardedSms.transactionAmount;
       matcheduser.save();
@@ -641,19 +996,36 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
     }
 
     console.log("Withdrawal request updated successfully");
-
+    console.log("ttt",transaction)
+ const bankaccount=await BankAccount.findOne({accountNumber:forwardedSms.agentAccount});
+ if(!bankaccount){
+  return res.send({success:false,message:"Agent did not find."})
+ }
     if (status === "success") {
       // Update ForwardedSms status to "used"
       forwardedSms.status = "used";
       await forwardedSms.save();
-      const bankaccount=await BankAccount.findOne({accountNumber:forwardedSms.agentAccount});
-      // bankaccount.total_payoutno+=1;
-      // bankaccount.total_cashout+=forwardedSms.transactionAmount;
-      // bankaccount.save();
+     
+      bankaccount.total_payoutno+=1;
+      bankaccount.total_cashout+=forwardedSms.transactionAmount;
+      bankaccount.save();
+
+      // ---------matched-user---------------
+      const matcheduser=await UserModel.findById({_id:bankaccount.user_id});
+      const agentcomissionmoney=(forwardedSms.transactionAmount/100)*matcheduser.withdracommission;
+      console.log(agentcomissionmoney)
+      matcheduser.balance+=forwardedSms.transactionAmount;
+      matcheduser.balance+=agentcomissionmoney;
+      matcheduser.providercost+=agentcomissionmoney;
+      matcheduser.totalpayout+=forwardedSms.transactionAmount;
+      matcheduser.save();
          //  ------------------merchant---------------------
       const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
       merchant_info.balance-=forwardedSms.transactionAmount;
       merchant_info.total_payout+=forwardedSms.transactionAmount;
+      const comissionmoney=(forwardedSms.transactionAmount/100)*merchant_info.withdrawCommission;
+      merchant_info.balance-=forwardedSms.transactionAmount;
+      merchant_info.getwaycost+=comissionmoney;
       merchant_info.save();
     }
 

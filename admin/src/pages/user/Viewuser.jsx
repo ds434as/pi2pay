@@ -350,8 +350,14 @@ const handleOnlineStatusChange = async () => {
                           <span className="font-medium">Balance:</span> {formatCurrency(agentData.balance, agentData.currency)}
                         </p>
                         <p className="text-sm text-gray-600 flex items-center">
-                          <FaMoneyBillWave className="mr-2 text-blue-500" />
-                          <span className="font-medium">Payment Method:</span> {agentData.paymentMethod}
+                       <div className='flex flex-col gap-1'>
+                              <span className=" flex justify-start gap-1 font-[700]"> <FaMoneyBillWave className="mr-2 text-blue-500" /> Payment Method:</span>
+                          {agentData.paymentMethod?.map((data)=>{
+                            return(
+                              <span className="font-medium pl-[30px]">{data}</span>
+                            )
+                          })}
+                       </div>
                         </p>
                         <p className="text-sm text-gray-600 flex items-center">
                           <FaPercentage className="mr-2 text-blue-500" />

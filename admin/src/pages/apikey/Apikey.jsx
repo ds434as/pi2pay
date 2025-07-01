@@ -14,7 +14,9 @@ const Apikey = () => {
     name: '',
     email: '',
     password: '',
-    websiteUrl: ''
+    websiteUrl: '',
+    withdrawCommission: '',
+    depositCommission: ''
   });
   const [editingId, setEditingId] = useState(null);
   
@@ -56,14 +58,27 @@ const Apikey = () => {
         return toast.error('Password must be at least 6 characters');
       }
 
+      // Validate commission values
+      if (isNaN(formData.withdrawCommission)) {
+        return toast.error('Withdraw commission must be a number');
+      }
+      if (isNaN(formData.depositCommission)) {
+        return toast.error('Deposit commission must be a number');
+      }
+      // Convert commission values to numbers
+      const payload = {
+        ...formData,
+        withdrawCommission: parseFloat(formData.withdrawCommission),
+        depositCommission: parseFloat(formData.depositCommission)
+      };
+
       if (editingId) {
         // Update existing merchant - exclude password unless it's being changed
-        const updateData = { ...formData };
-        if (!updateData.password) {
-          delete updateData.password;
+        if (!payload.password) {
+          delete payload.password;
         }
         
-        await axios.put(`${base_url}/api/admin/merchant-key/${editingId}`, updateData, {
+        await axios.put(`${base_url}/api/admin/merchant-key/${editingId}`, payload, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -71,14 +86,21 @@ const Apikey = () => {
         toast.success('Merchant updated successfully');
       } else {
         // Create new merchant
-        await axios.post(`${base_url}/api/admin/merchant-key`, formData, {
+        await axios.post(`${base_url}/api/admin/merchant-key`, payload, {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
         toast.success('Merchant created successfully');
       }
-      setFormData({ name: '', email: '', password: '', websiteUrl: '' });
+      setFormData({ 
+        name: '', 
+        email: '', 
+        password: '', 
+        websiteUrl: '', 
+        withdrawCommission: '', 
+        depositCommission: '' 
+      });
       setEditingId(null);
       fetchMerchants();
     } catch (error) {
@@ -96,7 +118,9 @@ const Apikey = () => {
       name: merchant.name,
       email: merchant.email,
       password: '', // Don't pre-fill password for security
-      websiteUrl: merchant.websiteUrl
+      websiteUrl: merchant.websiteUrl,
+      withdrawCommission: merchant.withdrawCommission?.toString() || '',
+      depositCommission: merchant.depositCommission?.toString() || ''
     });
     setEditingId(merchant._id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -130,7 +154,7 @@ const Apikey = () => {
   };
 
   return (
-    <section className="font-nunito bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <section className="font-nunito w-full bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
       <Toaster 
         position="top-center"
         toastOptions={{
@@ -146,7 +170,7 @@ const Apikey = () => {
       
       <Header toggleSidebar={toggleSidebar} />
 
-      <div className="flex pt-[10vh]">
+      <div className="flex pt-[10vh] w-full">
         <Sidebar isOpen={isSidebarOpen} />
 
         <main className={`transition-all duration-300 flex-1 p-6 ${isSidebarOpen ? 'ml-[17%]' : 'ml-0'}`}>
@@ -207,22 +231,59 @@ const Apikey = () => {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Withdraw Commission (%)</label>
+                  <input
+                    type="number"
+                    name="withdrawCommission"
+                    value={formData.withdrawCommission}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                    step="0.01"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Deposit Commission (%)</label>
+                  <input
+                    type="number"
+                    name="depositCommission"
+                    value={formData.depositCommission}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                    step="0.01"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+              </div>
               <div className="flex justify-end">
                 {editingId && (
                   <button
                     type="button"
                     onClick={() => {
-                      setFormData({ name: '', email: '', password: '', websiteUrl: '' });
+                      setFormData({ 
+                        name: '', 
+                        email: '', 
+                        password: '', 
+                        websiteUrl: '', 
+                        withdrawCommission: '', 
+                        depositCommission: '' 
+                      });
                       setEditingId(null);
                     }}
-                    className="mr-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
+                    className="mr-2 px-4 py-2 bg-gray-500 cursor-pointer text-white rounded-md hover:bg-gray-600 transition"
                   >
                     Cancel
                   </button>
                 )}
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                  className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-md hover:bg-blue-700 transition"
                 >
                   {editingId ? 'Update Merchant' : 'Create Merchant'}
                 </button>
@@ -230,57 +291,63 @@ const Apikey = () => {
             </form>
           </div>
 
-          {/* Merchants Table */}
-          <div className="bg-white rounded-lg border-[1x] border-gray-300 p-6">
-            <h2 className="text-xl font-semibold mb-4">Merchants</h2>
-            <div className="overflow-x-auto border-[1px] border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Website URL</th>
-                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">API Key</th>
-                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {merchants.length > 0 ? (
-                    merchants.map((merchant) => (
-                      <tr key={merchant._id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{merchant.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{merchant.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <a href={merchant.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            {merchant.websiteUrl}
-                          </a>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{merchant.apiKey}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <button
-                            onClick={() => handleEdit(merchant)}
-                            className="mr-2 text-blue-600 hover:text-blue-800"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(merchant._id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            Delete
-                          </button>
+          <div className='w-full overflow-x-auto'>
+            {/* Merchants Table */}
+            <div className="bg-white rounded-lg border-[1x] border-gray-300 p-6">
+              <h2 className="text-xl font-semibold mb-4">Merchants</h2>
+              <div className="overflow-x-auto border-[1px] border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-[700] text-gray-700 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-sm font-[700] text-gray-700 uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3 text-left text-sm font-[700] text-gray-700 uppercase tracking-wider">Website URL</th>
+                      <th className="px-6 py-3 text-left text-sm font-[700] text-gray-700 uppercase tracking-wider">Withdraw Commission</th>
+                      <th className="px-6 py-3 text-left text-sm font-[700] text-gray-700 uppercase tracking-wider">Deposit Commission</th>
+                      <th className="px-6 py-3 text-left text-sm font-[700] text-gray-700 uppercase tracking-wider">API Key</th>
+                      <th className="px-6 py-3 text-left text-sm font-[700] text-gray-700 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {merchants.length > 0 ? (
+                      merchants.map((merchant) => (
+                        <tr key={merchant._id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{merchant.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{merchant.email}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <a href={merchant.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                              {merchant.websiteUrl}
+                            </a>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{merchant.withdrawCommission}%</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{merchant.depositCommission}%</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{merchant.apiKey}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <button
+                              onClick={() => handleEdit(merchant)}
+                              className="mr-2 text-blue-600 hover:text-blue-800"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(merchant._id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">
+                          No merchants found
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                        No merchants found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </main>

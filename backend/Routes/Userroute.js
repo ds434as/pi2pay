@@ -484,7 +484,89 @@ Userrouter.put('/update-bank-account/:id',async (req, res) => {
   }
 });
 
+// Update bank account status (updates both BankAccount and User's agentAccount)
+Userrouter.put('/update-bank-account-status/:id', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const bankAccountId = req.params.id;
+    const userId = req.user._id;
 
+    // Validate status
+    if (!status || !['active', 'inactive'].includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Valid status (active/inactive) is required' 
+      });
+    }
+
+    // Find the bank account first to get the account number
+    const bankAccount = await BankAccount.findOne({ 
+      _id: bankAccountId, 
+      user_id: userId 
+    });
+
+    if (!bankAccount) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Bank account not found' 
+      });
+    }
+
+    // Update both records in parallel
+    const [updatedBankAccount, updatedUser] = await Promise.all([
+      // Update BankAccount
+      BankAccount.findOneAndUpdate(
+        { _id: bankAccountId, user_id: userId },
+        { status },
+        { new: true }
+      ),
+      
+      // Update User's agentAccount
+      UserModel.findOneAndUpdate(
+        { 
+          _id: userId,
+          'agentAccounts.accountNumber': bankAccount.accountNumber 
+        },
+        { 
+          $set: { 
+            'agentAccounts.$.status': status,
+            'agentAccounts.$.updatedAt': Date.now()
+          } 
+        },
+        { new: true }
+      )
+    ]);
+
+    if (!updatedBankAccount || !updatedUser) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Failed to update one or both account records' 
+      });
+    }
+
+    // Find the updated agent account from the user document
+    const updatedAgentAccount = updatedUser.agentAccounts.find(
+      acc => acc.accountNumber === bankAccount.accountNumber
+    );
+
+    res.json({
+      success: true,
+      message: 'Bank account status updated successfully',
+      data: {
+        bankAccount: updatedBankAccount,
+        agentAccount: updatedAgentAccount
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating bank account status:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'An error occurred while updating the bank account status',
+      error: error.message 
+    });
+  }
+});
 // ---------------filter-payin----------------------------
 // Filter Payin transactions
 Userrouter.post('/filter-transaction', async (req, res) => {
@@ -583,6 +665,20 @@ Userrouter.get("/bank-accunts/:id",async(req,res)=>{
       return res.send({success:false,message:"Account not found."})
     }
     res.send({success:true,data:bankaccount})
+  } catch (error) {
+    console.log(error)
+  }
+})
+
+
+Userrouter.get("/transaction-status/:id",async(req,res)=>{
+  try {
+    console.log(req.params.id)
+    const find_transaction=await PayinTransaction.findOne({paymentId:req.params.id});
+    if(!find_transaction){
+        return res.send({success:false,message:"Transaction Not Found!"})
+    }
+    res.send({success:true,data:find_transaction})
   } catch (error) {
     console.log(error)
   }

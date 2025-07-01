@@ -357,7 +357,7 @@ const Edituser = () => {
       default:
         break;
     }
-
+// ---------------disabled-bank-account--------------------------
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${textColor} capitalize`}>
         {status || 'N/A'}
@@ -470,10 +470,16 @@ const Edituser = () => {
                         >
                           <FaEdit className="mr-1" /> Update Balance
                         </button>
-                        <p className="text-sm text-gray-600 flex items-center">
-                          <FaMoneyBillWave className="mr-2 text-blue-500" />
-                          <span className="font-medium">Payment Method:</span> {agentData.paymentMethod}
-                        </p>
+                         <p className="text-sm text-gray-600 flex items-center">
+                                       <div className='flex flex-col gap-1'>
+                                              <span className=" flex justify-start gap-1 font-[700]"> <FaMoneyBillWave className="mr-2 text-blue-500" /> Payment Method:</span>
+                                          {agentData.paymentMethod?.map((data)=>{
+                                            return(
+                                              <span className="font-medium pl-[30px]">{data}</span>
+                                            )
+                                          })}
+                                       </div>
+                                        </p>
                         <p className="text-sm text-gray-600 flex items-center">
                           <FaPercentage className="mr-2 text-blue-500" />
                           <span className="font-medium">Deposit Commission:</span> {agentData.depositcommission}%

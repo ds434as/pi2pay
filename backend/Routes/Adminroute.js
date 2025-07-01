@@ -52,17 +52,99 @@ Adminroute.get("/single-user-payin/:id",async(req,res)=>{
   }
 })
 // update user
-Adminroute.put('/users-commissions/:id',async (req,res)=>{
+// Updated Admin route for commissions
+Adminroute.put('/users-commissions/:id', async (req, res) => {
     try {
-        const {withdracommission,depositcommission,paymentMethod,paymentBrand}=req.body;
-        const user=await UserModel.findById({_id:req.params.id});
-        if(!user){
-            return res.send({success:false,message:"Agent did not find."})
+        const { withdracommission, depositcommission, paymentMethod, paymentBrand } = req.body;
+        
+        // Validate commission values
+        if (typeof withdracommission !== 'number' || typeof depositcommission !== 'number') {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Commission values must be numbers" 
+            });
         }
-        await UserModel.findByIdAndUpdate({_id:req.params.id},{$set:{withdracommission:withdracommission,depositcommission:depositcommission,paymentMethod:paymentMethod,paymentbrand:paymentBrand}});
-        res.send({success:true,message:"Agent updated successfully."});
+
+        // Validate paymentMethod is an array if provided
+        if (paymentMethod && !Array.isArray(paymentMethod)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Payment method must be an array" 
+            });
+        }
+
+        // Check if payment methods exceed the limit (5 as per your schema)
+        if (paymentMethod && paymentMethod.length > 5) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Cannot have more than 5 payment methods" 
+            });
+        }
+
+        // Check if user exists
+        const user = await UserModel.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Agent not found" 
+            });
+        }
+
+        // Prepare update object
+        const updateData = {
+            withdracommission,
+            depositcommission
+        };
+        
+        // Only update paymentMethod if it's provided
+        if (paymentMethod) {
+            updateData.paymentMethod = paymentMethod;
+        }
+        
+        if (paymentBrand) {
+            updateData.paymentbrand = paymentBrand;
+        }
+
+        // Update the user with validation
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            req.params.id,
+            { $set: updateData },
+            { 
+                new: true, 
+                runValidators: true // Ensures schema validations run
+            }
+        ).select('-password -__v'); // Exclude sensitive fields
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Agent commissions updated successfully",
+            data: updatedUser 
+        });
     } catch (error) {
-        console.log(error)
+        console.error('Error updating agent commissions:', error);
+        
+        // Handle specific errors
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ 
+                success: false, 
+                message: "Validation error",
+                errors: messages 
+            });
+        }
+        
+        if (error.name === 'CastError') {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid ID format" 
+            });
+        }
+
+        res.status(500).json({ 
+            success: false, 
+            message: "Internal server error",
+            error: error.message 
+        });
     }
 });
 // Update user status
@@ -1302,10 +1384,10 @@ Adminroute.get('/analytics', async (req, res) => {
 // POST - Create new merchant
 Adminroute.post('/merchant-key', async (req, res) => {
   try {
-    const { name, email, password, websiteUrl } = req.body;
+    const { name, email, password, websiteUrl, withdrawCommission, depositCommission } = req.body;
     
     // Validate required fields
-    if (!name || !email || !password || !websiteUrl) {
+    if (!name || !email || !password || !websiteUrl || withdrawCommission === undefined || depositCommission === undefined) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
@@ -1313,13 +1395,25 @@ Adminroute.post('/merchant-key', async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
-    const hashpassword=await bcrypt.hash(password,10);
+
+    // Validate commission values
+    if (isNaN(withdrawCommission) || withdrawCommission < 0 || withdrawCommission > 100) {
+      return res.status(400).json({ error: 'Withdraw commission must be a number between 0 and 100' });
+    }
+    if (isNaN(depositCommission) || depositCommission < 0 || depositCommission > 100) {
+      return res.status(400).json({ error: 'Deposit commission must be a number between 0 and 100' });
+    }
+
+    const hashpassword = await bcrypt.hash(password, 10);
+    
     // Create new merchant with all required fields
     const merchant = new Merchantkey({
       name,
       email,
-      password:hashpassword, // This will be hashed by the pre-save hook
-      websiteUrl
+      password: hashpassword,
+      websiteUrl,
+      withdrawCommission,
+      depositCommission
       // apiKey and createdAt will be automatically generated
     });
 
@@ -1333,6 +1427,8 @@ Adminroute.post('/merchant-key', async (req, res) => {
         name: merchant.name,
         email: merchant.email,
         websiteUrl: merchant.websiteUrl,
+        withdrawCommission: merchant.withdrawCommission,
+        depositCommission: merchant.depositCommission,
         apiKey: merchant.apiKey,
         createdAt: merchant.createdAt
       }
@@ -1351,14 +1447,37 @@ Adminroute.post('/merchant-key', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 // PUT - Update merchant by ID
 Adminroute.put('/merchant-key/:id', async (req, res) => {
   try {
-    const { name, email, websiteUrl } = req.body;
+    const { name, email, websiteUrl, withdrawCommission, depositCommission } = req.body;
     
+    // Validate commission values if provided
+    if (withdrawCommission !== undefined) {
+      if (isNaN(withdrawCommission) || withdrawCommission < 0 || withdrawCommission > 100) {
+        return res.status(400).json({ error: 'Withdraw commission must be a number between 0 and 100' });
+      }
+    }
+    if (depositCommission !== undefined) {
+      if (isNaN(depositCommission) || depositCommission < 0 || depositCommission > 100) {
+        return res.status(400).json({ error: 'Deposit commission must be a number between 0 and 100' });
+      }
+    }
+
+    const updateData = {
+      name,
+      email,
+      websiteUrl
+    };
+
+    // Only add commission fields if they're provided
+    if (withdrawCommission !== undefined) updateData.withdrawCommission = withdrawCommission;
+    if (depositCommission !== undefined) updateData.depositCommission = depositCommission;
+
     const merchant = await Merchantkey.findByIdAndUpdate(
       req.params.id,
-      { name, email, websiteUrl },
+      updateData,
       { new: true }
     );
 
@@ -1368,16 +1487,28 @@ Adminroute.put('/merchant-key/:id', async (req, res) => {
 
     res.json({
       message: 'Merchant updated successfully',
-      merchant
+      merchant: {
+        id: merchant._id,
+        name: merchant.name,
+        email: merchant.email,
+        websiteUrl: merchant.websiteUrl,
+        withdrawCommission: merchant.withdrawCommission,
+        depositCommission: merchant.depositCommission,
+        apiKey: merchant.apiKey,
+        createdAt: merchant.createdAt
+      }
     });
   } catch (err) {
     if (err.code === 11000) {
       return res.status(400).json({ error: 'Email already exists' });
     }
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ error: err.message });
+    }
+    console.error('Error updating merchant:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
-
 // DELETE - Remove merchant by ID
 Adminroute.delete('/merchant-key/:id', async (req, res) => {
   try {
@@ -1558,6 +1689,49 @@ Adminroute.patch('/merchant-payment/:id/status', async (req, res) => {
   }
 });
 
+// ----------------------disabled-all-bank-account-------------------
+// Disable all payment methods for a user
+Adminroute.put('/disable-all-payments/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { disableAllPayments } = req.body;
 
+    // Validate user exists
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Update all bank accounts for this user
+    await BankAccount.updateMany(
+      { user_id: userId },
+      { status: disableAllPayments ? 'inactive' : 'active' }
+    );
+
+    // Also update agent accounts in User model if they exist
+    if (user.agentAccounts && user.agentAccounts.length > 0) {
+      await UserModel.updateOne(
+        { _id: userId },
+        { 
+          $set: { 
+            'agentAccounts.$[].status': disableAllPayments ? 'inactive' : 'active' 
+          } 
+        }
+      );
+    }
+
+    res.json({ 
+      success: true, 
+      message: `All payment methods ${disableAllPayments ? 'disabled' : 'enabled'} successfully` 
+    });
+
+  } catch (error) {
+    console.error('Error updating payment methods:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update payment methods' 
+    });
+  }
+});
 
 module.exports = Adminroute;

@@ -73,9 +73,9 @@ const payment_bkash = async (req, res) => {
       message: "Required fields are not filled out."
     });
   }
+
   
   console.log("pass-condition-1");
-
   try {
     
     const payinTransaction = await PayinTransaction.findOne({
@@ -110,7 +110,7 @@ const payment_bkash = async (req, res) => {
       return res.status(200).json({
         success: false,
         orderId: data.orderId,
-        message: "No eligible agents found with sufficient balance"
+        message: "No eligible agents found."
       });
     }
 
@@ -288,23 +288,24 @@ const payment_bkash = async (req, res) => {
         if (executeObj.data.transactionStatus === 'Completed') {
           transaction_status = 'completed';
           const find_account=await BankAccount.findOne({accountNumber:transaction.agentAccount});
-          const matched_user=await UserModel.findById({_id:find_account._id});
+          const matched_user=await UserModel.findById({_id:find_account.user_id});
            transaction.status="completed";
            transaction.save();
           find_account.total_order+=1;
           find_account.total_recieved+=transaction.expectedAmount;
           find_account.save();
-          const comissionmoney=(transaction.expectedAmount/100)*matched_user.depositcommission;
-      matched_user.balance+=forwardedSms.transactionAmount;
-      matched_user.providercost+=comissionmoney;
-      matched_user.totalpayment+=forwardedSms.transactionAmount;
-      matched_user.save();
-   //  ------------------merchant---------------------
-      const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
-      merchant_info.balance-=transaction.expectedAmount;
-      merchant_info.total_payin+=transaction.expectedAmount;
-      merchant_info.save();
-
+          matched_user.balance-=forwardedSms.transactionAmount;
+          matched_user.providercost+=comissionmoney;
+          matched_user.totalpayment+=forwardedSms.transactionAmount;
+          matched_user.save();
+  
+          const matchedmerchant=await Merchantkey.findById({_id:transaction.merchantid})  ;
+          const comissionmoney=(transaction.expectedAmount/100)*matchedmerchant.depositCommission;
+          matchedmerchant.balance+=transaction.expectedAmount;
+          matchedmerchant.balance-=comissionmoney;
+          matchedmerchant.total_payin+=forwardedSms.transactionAmount;
+          matchedmerchant.providercost+=comissionmoney;
+          matchedmerchant.save();
         } else if (executeObj.data.transactionStatus === 'Pending Authorized') {
           transaction_status = 'pending';
         } else if (executeObj.data.transactionStatus === 'Expired') {

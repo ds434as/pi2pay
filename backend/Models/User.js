@@ -238,9 +238,18 @@ const UserSchema = new Schema({
     type: Number,
     default: 0
   },
-  paymentMethod: {
+paymentMethod: {
+  type: [{
     type: String,
-  },
+  }],
+  default: [],
+  validate: {
+    validator: function(v) {
+      return v.length <= 5; // Limit to 5 payment methods max
+    },
+    message: 'Cannot have more than 5 payment methods!'
+  }
+},
   paymentbrand: {
     type: String,
   },

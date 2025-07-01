@@ -19,6 +19,7 @@ import {
 import { motion } from 'framer-motion';
 import { FiDollarSign, FiCreditCard, FiUsers, FiTrendingUp } from 'react-icons/fi';
 import { FaBangladeshiTakaSign } from "react-icons/fa6";
+
 const Mdashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
@@ -39,6 +40,7 @@ const Mdashboard = () => {
           }
         });
         const data = await response.json();
+        console.log(data)
         setDashboardData(data.data);
         
         // In a real app, you would fetch previous month's data here
@@ -186,7 +188,7 @@ const Mdashboard = () => {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-sm font-medium">Total Payin</p>
-                      <p className="text-2xl font-bold">৳{data.counts.totalPayin}</p>
+                      <p className="text-2xl font-bold">৳{data.mathed_merchant.total_payin}</p>
                     </div>
                     <div className="p-3 rounded-full bg-blue-400 bg-opacity-30">
                       <FaBangladeshiTakaSign className="text-2xl" />
@@ -209,7 +211,7 @@ const Mdashboard = () => {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-sm font-medium">Total Payout</p>
-                      <p className="text-2xl font-bold">৳{data.counts.totalPayout}</p>
+                      <p className="text-2xl font-bold">৳{data.mathed_merchant.total_payout}</p>
                     </div>
                     <div className="p-3 rounded-full bg-green-400 bg-opacity-30">
                       <FiCreditCard className="text-2xl" />
@@ -232,7 +234,7 @@ const Mdashboard = () => {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-sm font-medium">Payment Requests</p>
-                      <p className="text-2xl font-bold">৳{data.counts.totalPaymentRequests}</p>
+                      <p className="text-2xl font-bold">{data.counts.totalPaymentRequests}</p>
                     </div>
                     <div className="p-3 rounded-full bg-purple-400 bg-opacity-30">
                       <FiUsers className="text-2xl" />
@@ -245,6 +247,29 @@ const Mdashboard = () => {
                   </div>
                 </motion.div>
 
+  {/* New Gateway Cost Card */}
+  <motion.div
+    variants={cardVariants}
+    initial="hidden"
+    animate="visible"
+    transition={{ duration: 0.7 }}
+    className="bg-gradient-to-r from-rose-500 to-rose-600 rounded-xl shadow-lg p-6 text-white"
+  >
+    <div className="flex justify-between items-center">
+      <div>
+        <p className="text-sm font-medium">Gateway Cost</p>
+        <p className="text-2xl font-bold">৳{data.mathed_merchant?.getwaycost}</p>
+      </div>
+      <div className="p-3 rounded-full bg-rose-400 bg-opacity-30">
+        <FaBangladeshiTakaSign className="text-2xl" />
+      </div>
+    </div>
+    <div className="mt-4 text-xs font-medium">
+      <span className="text-rose-200">
+        Per transaction cost
+      </span>
+    </div>
+  </motion.div>
                 <motion.div
                   variants={cardVariants}
                   initial="hidden"

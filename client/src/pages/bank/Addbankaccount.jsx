@@ -180,7 +180,11 @@ const Addbankaccount = () => {
                   name="provider"
                 >
                   <option value="">Select Provider Payment Method</option>
-                  <option value={userData?.paymentMethod}>{userData?.username} ({userData?.paymentMethod})</option>
+                {userData?.paymentMethod.map((data)=>{
+                  return(
+                  <option value={data}>{userData?.username} ({data})</option>
+                  ) 
+                })}
                 </select>
                 {errors.provider && <span className="text-red-500 text-xs mt-1">{errors.provider}</span>}
               </div>

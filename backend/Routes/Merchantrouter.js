@@ -248,7 +248,7 @@ Merchantrouter.get('/transactions/:merchantid', async (req, res) => {
       PayoutTransaction.find({ merchantid }),
       MerchantPaymentRequest.find({ merchantId: new mongoose.Types.ObjectId(merchantid) })
     ]);
-    
+    const mathed_merchant=await Merchantkey.findById({_id:req.params.merchantid});
     // Get counts in parallel
     const [payinCount, payoutCount, paymentRequestCount] = await Promise.all([
       PayinTransaction.countDocuments({ merchantid }),
@@ -297,7 +297,8 @@ Merchantrouter.get('/transactions/:merchantid', async (req, res) => {
         payinTransactions,
         payoutTransactions,
         paymentRequests
-      }
+      },
+      mathed_merchant
     };
     
     res.status(200).json({

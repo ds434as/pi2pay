@@ -28,6 +28,7 @@ export const UserProvider = ({ children }) => {
 
       if (response.data.success) {
         setUserData(response.data.user);
+        console.log(response.data.user)
       } else {
         setError(response.data.message || 'Failed to fetch user data');
       }

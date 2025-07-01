@@ -218,7 +218,7 @@ const Checkout = () => {
                   </div>
                   <button
                     onClick={goToWebsite}
-                    className="px-6 py-3 bg-gradient-to-r from-theme to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-theme transition-all font-bold w-full shadow-md"
+                    className="px-6 py-3 cursor-pointer bg-gradient-to-r from-theme to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-theme transition-all font-bold w-full shadow-md"
                   >
                     CONTINUE TO WEBSITE
                   </button>
@@ -250,7 +250,7 @@ const Checkout = () => {
                             />
                             <button
                               onClick={handleCopy}
-                              className="ml-2 text-theme hover:text-blue-700 transition-colors p-1 rounded-full hover:bg-blue-50"
+                              className="ml-2 text-theme cursor-pointer hover:text-blue-700 transition-colors p-1 rounded-full hover:bg-blue-50"
                               title="Copy to clipboard"
                             >
                               <FaRegCopy size={16} />

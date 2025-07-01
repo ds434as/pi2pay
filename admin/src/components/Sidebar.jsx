@@ -12,6 +12,9 @@ import { MdOutlineVideoChat } from "react-icons/md";
 import { TfiLayoutSliderAlt } from "react-icons/tfi";
 import { LuKeySquare } from "react-icons/lu";
 import { MdOutlinePayment } from "react-icons/md";
+import { MdOutlineSupervisorAccount } from "react-icons/md";
+
+
 const Sidebar = ({ isOpen }) => {
   const location = useLocation();
   const [openMenu, setOpenMenu] = useState(null);
@@ -94,6 +97,19 @@ const Sidebar = ({ isOpen }) => {
           <span className="flex items-center gap-2 text-gray-100">
             <MdOutlinePayment className="text-[18px]" />
            Merchant Payment
+          </span>
+        </NavLink>
+      </div>
+               <div className="mb-3">
+        <NavLink
+          to="/dashboard/all-merchants"
+          className={({ isActive }) =>
+            `flex items-center justify-between w-full px-3 py-2 text-[15px] lg:text-[16px] cursor-pointer rounded-[5px] transition duration-200`
+          }
+        >
+          <span className="flex items-center gap-2 text-gray-100">
+            <MdOutlineSupervisorAccount className="text-[18px]" />
+           All Merchant
           </span>
         </NavLink>
       </div>
