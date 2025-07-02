@@ -400,7 +400,7 @@ const handleOnlineStatusChange = async () => {
                   <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mr-4">
                     Total: {bankaccount.length}
                   </span>
-                  <button 
+                  {/* <button 
                     onClick={() => {
                       setEditingAccount({
                         provider: agentData.paymentMethod,
@@ -421,7 +421,7 @@ const handleOnlineStatusChange = async () => {
                     className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm flex items-center"
                   >
                     <FaPlus className="mr-1" /> Add Account
-                  </button>
+                  </button> */}
                 </div>
               </div>
 
@@ -517,7 +517,6 @@ const handleOnlineStatusChange = async () => {
                 </div>
               )}
             </div>
-
             {/* Payin Transactions Table */}
             <div className="bg-white rounded-lg border-[1px] border-gray-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
@@ -666,7 +665,7 @@ const handleOnlineStatusChange = async () => {
               onClose={() => setIsEditModalOpen(false)}
               onSave={handleSaveAccount}
               isNew={!editingAccount?._id}
-              paymentMethod={agentData?.paymentMethod}
+              paymentMethod={editingAccount?.provider}
             />
           )}
         </main>

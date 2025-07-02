@@ -17,14 +17,25 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { FiDollarSign, FiCreditCard, FiUsers, FiTrendingUp } from 'react-icons/fi';
+import { FiDollarSign, FiCreditCard, FiUsers, FiTrendingUp, FiCalendar, FiFilter } from 'react-icons/fi';
 import { FaBangladeshiTakaSign } from "react-icons/fa6";
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const Mdashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [previousMonthData, setPreviousMonthData] = useState(null);
+  const [gatewayHistory, setGatewayHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [timeFilter, setTimeFilter] = useState('month');
+  const [customDateRange, setCustomDateRange] = useState({
+    start: new Date(new Date().setMonth(new Date().getMonth() - 1)),
+    end: new Date()
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
   const token = localStorage.getItem('merchantToken');
   const merchantId = JSON.parse(localStorage.getItem('merchantData'));
@@ -34,17 +45,19 @@ const Mdashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch(`${base_url}/api/merchant/transactions/${merchantId._id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const data = await response.json();
-        console.log(data)
-        setDashboardData(data.data);
+        setLoading(true);
+        const [dashboardRes, historyRes] = await Promise.all([
+          fetch(`${base_url}/api/merchant/transactions/${merchantId._id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }),
+          fetchGatewayHistory('month')
+        ]);
+
+        const dashboardJson = await dashboardRes.json();
+        setDashboardData(dashboardJson.data);
         
-        // In a real app, you would fetch previous month's data here
-        // For demo, we'll create some sample previous data
         setPreviousMonthData({
           totalPayin: 1000,
           totalPayout: 700,
@@ -69,31 +82,46 @@ const Mdashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Sample data format if API is not ready
-  const sampleData = {
-    counts: {
-      totalPayin: 1245,
-      totalPayout: 843,
-      totalPaymentRequests: 312,
-      payinStatusCounts: {
-        pending: 45,
-        completed: 1150,
-        rejected: 50
-      },
-      payoutStatusCounts: {
-        pending: 23,
-        success: 800,
-        rejected: 20
-      },
-      paymentRequestStatusCounts: {
-        pending: 12,
-        completed: 290,
-        failed: 10
+  const fetchGatewayHistory = async (period) => {
+    try {
+      setHistoryLoading(true);
+      let url = `${base_url}/api/merchants/${merchantId._id}/gateway-history?period=${period}`;
+      
+      if (period === 'custom') {
+        const startStr = customDateRange.start.toISOString().split('T')[0];
+        const endStr = customDateRange.end.toISOString().split('T')[0];
+        url += `&customStart=${startStr}&customEnd=${endStr}`;
       }
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await response.json();
+      setGatewayHistory(data.history || []);
+    } catch (error) {
+      console.error('Error fetching gateway history:', error);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
-  const data = dashboardData || sampleData;
+  const handleFilterChange = (newFilter) => {
+    setTimeFilter(newFilter);
+    fetchGatewayHistory(newFilter);
+  };
+
+  const handleDateChange = (dates) => {
+    const [start, end] = dates;
+    setCustomDateRange({ start, end });
+    if (start && end) {
+      setTimeFilter('custom');
+      fetchGatewayHistory('custom');
+      setShowDatePicker(false);
+    }
+  };
 
   // Calculate dynamic percentages
   const calculatePercentage = (current, previous) => {
@@ -102,29 +130,29 @@ const Mdashboard = () => {
   };
 
   // Success rates
-  const payinSuccessRate = data.counts?.payinStatusCounts?.completed 
-    ? ((data.counts.payinStatusCounts.completed / data.counts.totalPayin) * 100).toFixed(1)
+  const payinSuccessRate = dashboardData?.counts?.payinStatusCounts?.completed 
+    ? ((dashboardData.counts.payinStatusCounts.completed / dashboardData.counts.totalPayin) * 100).toFixed(1)
     : '0';
 
-  const payoutSuccessRate = data.counts?.payoutStatusCounts?.success 
-    ? ((data.counts.payoutStatusCounts.success / data.counts.totalPayout) * 100).toFixed(1)
+  const payoutSuccessRate = dashboardData?.counts?.payoutStatusCounts?.success 
+    ? ((dashboardData.counts.payoutStatusCounts.success / dashboardData.counts.totalPayout) * 100).toFixed(1)
     : '0';
 
-  const paymentRequestSuccessRate = data.counts?.paymentRequestStatusCounts?.completed
-    ? ((data.counts.paymentRequestStatusCounts.completed / data.counts.totalPaymentRequests) * 100).toFixed(1)
+  const paymentRequestSuccessRate = dashboardData?.counts?.paymentRequestStatusCounts?.completed
+    ? ((dashboardData.counts.paymentRequestStatusCounts.completed / dashboardData.counts.totalPaymentRequests) * 100).toFixed(1)
     : '0';
 
   // Percentage changes from previous month
   const payinChange = previousMonthData 
-    ? calculatePercentage(data.counts.totalPayin, previousMonthData.totalPayin)
+    ? calculatePercentage(dashboardData?.counts?.totalPayin || 0, previousMonthData.totalPayin)
     : '0';
   
   const payoutChange = previousMonthData 
-    ? calculatePercentage(data.counts.totalPayout, previousMonthData.totalPayout)
+    ? calculatePercentage(dashboardData?.counts?.totalPayout || 0, previousMonthData.totalPayout)
     : '0';
   
   const paymentRequestChange = previousMonthData 
-    ? calculatePercentage(data.counts.totalPaymentRequests, previousMonthData.totalPaymentRequests)
+    ? calculatePercentage(dashboardData?.counts?.totalPaymentRequests || 0, previousMonthData.totalPaymentRequests)
     : '0';
   
   const payinSuccessChange = previousMonthData 
@@ -135,12 +163,12 @@ const Mdashboard = () => {
     : '0';
 
   // Chart data preparation
-  const payinStatusData = data.counts ? Object.entries(data.counts.payinStatusCounts).map(([name, value]) => ({
+  const payinStatusData = dashboardData?.counts ? Object.entries(dashboardData.counts.payinStatusCounts).map(([name, value]) => ({
     name,
     value
   })) : [];
 
-  const payoutStatusData = data.counts ? Object.entries(data.counts.payoutStatusCounts).map(([name, value]) => ({
+  const payoutStatusData = dashboardData?.counts ? Object.entries(dashboardData.counts.payoutStatusCounts).map(([name, value]) => ({
     name,
     value
   })) : [];
@@ -154,6 +182,13 @@ const Mdashboard = () => {
     { name: 'Jun', payin: 2390, payout: 3800 },
     { name: 'Jul', payin: 3490, payout: 4300 },
   ];
+
+  // Prepare gateway history chart data
+  const gatewayHistoryChartData = gatewayHistory.map(entry => ({
+    date: new Date(entry.updatedAt).toLocaleDateString(),
+    amount: entry.amount,
+    type: entry.amount >= 0 ? 'Credit' : 'Debit'
+  }));
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -188,7 +223,7 @@ const Mdashboard = () => {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-sm font-medium">Total Payin</p>
-                      <p className="text-2xl font-bold">৳{data.mathed_merchant.total_payin}</p>
+                      <p className="text-2xl font-bold">৳{dashboardData?.mathed_merchant?.total_payin || 0}</p>
                     </div>
                     <div className="p-3 rounded-full bg-blue-400 bg-opacity-30">
                       <FaBangladeshiTakaSign className="text-2xl" />
@@ -211,7 +246,7 @@ const Mdashboard = () => {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-sm font-medium">Total Payout</p>
-                      <p className="text-2xl font-bold">৳{data.mathed_merchant.total_payout}</p>
+                      <p className="text-2xl font-bold">৳{dashboardData?.mathed_merchant?.total_payout || 0}</p>
                     </div>
                     <div className="p-3 rounded-full bg-green-400 bg-opacity-30">
                       <FiCreditCard className="text-2xl" />
@@ -234,7 +269,7 @@ const Mdashboard = () => {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-sm font-medium">Payment Requests</p>
-                      <p className="text-2xl font-bold">{data.counts.totalPaymentRequests}</p>
+                      <p className="text-2xl font-bold">{dashboardData?.counts?.totalPaymentRequests || 0}</p>
                     </div>
                     <div className="p-3 rounded-full bg-purple-400 bg-opacity-30">
                       <FiUsers className="text-2xl" />
@@ -247,48 +282,26 @@ const Mdashboard = () => {
                   </div>
                 </motion.div>
 
-  {/* New Gateway Cost Card */}
-  <motion.div
-    variants={cardVariants}
-    initial="hidden"
-    animate="visible"
-    transition={{ duration: 0.7 }}
-    className="bg-gradient-to-r from-rose-500 to-rose-600 rounded-xl shadow-lg p-6 text-white"
-  >
-    <div className="flex justify-between items-center">
-      <div>
-        <p className="text-sm font-medium">Gateway Cost</p>
-        <p className="text-2xl font-bold">৳{data.mathed_merchant?.getwaycost}</p>
-      </div>
-      <div className="p-3 rounded-full bg-rose-400 bg-opacity-30">
-        <FaBangladeshiTakaSign className="text-2xl" />
-      </div>
-    </div>
-    <div className="mt-4 text-xs font-medium">
-      <span className="text-rose-200">
-        Per transaction cost
-      </span>
-    </div>
-  </motion.div>
+                {/* Gateway Cost Card */}
                 <motion.div
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
                   transition={{ duration: 0.6 }}
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl shadow-lg p-6 text-white"
+                  className="bg-gradient-to-r from-rose-500 to-rose-600 rounded-xl shadow-lg p-6 text-white"
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-sm font-medium">Success Rate</p>
-                      <p className="text-2xl font-bold">{payinSuccessRate}%</p>
+                      <p className="text-sm font-medium">Gateway Cost</p>
+                      <p className="text-2xl font-bold">৳{dashboardData?.mathed_merchant?.getwaycost || 0}</p>
                     </div>
-                    <div className="p-3 rounded-full bg-amber-400 bg-opacity-30">
-                      <FiTrendingUp className="text-2xl" />
+                    <div className="p-3 rounded-full bg-rose-400 bg-opacity-30">
+                      <FaBangladeshiTakaSign className="text-2xl" />
                     </div>
                   </div>
                   <div className="mt-4 text-xs font-medium">
-                    <span className={`${payinSuccessChange >= 0 ? 'text-amber-200' : 'text-red-200'}`}>
-                      {payinSuccessChange >= 0 ? '↑' : '↓'} {Math.abs(payinSuccessChange)}% from last month
+                    <span className="text-rose-200">
+                      Current balance
                     </span>
                   </div>
                 </motion.div>
@@ -373,36 +386,131 @@ const Mdashboard = () => {
                 </motion.div>
               </div>
 
-              {/* Additional Bar Chart */}
+              {/* Gateway Cost History Section */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.8 }}
-                className="bg-white p-6 rounded-xl shadow-lg mb-8"
+                className="bg-white p-6 rounded-xl shadow-md border-[1px] border-gray-200 mb-8"
               >
-                <h3 className="text-lg font-semibold mb-4">Payout Status Overview</h3>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={payoutStatusData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="name" stroke="#888" />
-                      <YAxis stroke="#888" />
-                      <Tooltip 
-                        formatter={(value, name, props) => {
-                          const total = payoutStatusData.reduce((sum, item) => sum + item.value, 0);
-                          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                          return [`${value} (${percentage}%)`, name];
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]}>
-                        {payoutStatusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold">Gateway Cost History</h3>
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <button 
+                        onClick={() => setShowDatePicker(!showDatePicker)}
+                        className="flex items-center px-3 py-2 bg-gray-100 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                      >
+                        <FiCalendar className="mr-2" />
+                        {timeFilter === 'custom' 
+                          ? `${customDateRange.start.toLocaleDateString()} - ${customDateRange.end.toLocaleDateString()}`
+                          : timeFilter.charAt(0).toUpperCase() + timeFilter.slice(1)}
+                      </button>
+                      
+                      {showDatePicker && (
+                        <div className="absolute right-0 mt-2 z-10 bg-white shadow-lg rounded-lg p-2">
+                          <DatePicker
+                            selectsRange
+                            startDate={customDateRange.start}
+                            endDate={customDateRange.end}
+                            onChange={handleDateChange}
+                            inline
+                          />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+                      {['day', 'week', 'month', 'year'].map((filter) => (
+                        <button
+                          key={filter}
+                          onClick={() => handleFilterChange(filter)}
+                          className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                            timeFilter === filter ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
+                          }`}
+                        >
+                          {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
+
+                {historyLoading ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={gatewayHistoryChartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="date" stroke="#888" />
+                          <YAxis stroke="#888" />
+                          <Tooltip 
+                            formatter={(value) => [`৳${value}`, 'Amount']}
+                            labelFormatter={(date) => `Date: ${date}`}
+                          />
+                          <Legend />
+                          <Bar dataKey="amount" name="Amount" radius={[4, 4, 0, 0]}>
+                            {gatewayHistoryChartData.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={entry.amount >= 0 ? '#10B981' : '#EF4444'} 
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border-[1px] border-gray-200">
+                      <h4 className="font-medium text-gray-700 mb-3">Recent Transactions</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-100">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {gatewayHistory.slice(0, 5).map((entry, index) => (
+                              <tr key={index}>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                                  {new Date(entry.updatedAt).toLocaleString()}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    entry.amount >= 0 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {entry.amount >= 0 ? 'Credit' : 'Debit'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium ${
+                                  entry.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                                }">
+                                  ৳{entry.amount >= 0 ? '+' : ''}{entry.amount}
+                                </td>
+                              </tr>
+                            ))}
+                            {gatewayHistory.length === 0 && (
+                              <tr>
+                                <td colSpan="3" className="px-4 py-4 text-center text-sm text-gray-500">
+                                  No gateway cost history available
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </>
           )}

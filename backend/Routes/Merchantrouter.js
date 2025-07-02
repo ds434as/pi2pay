@@ -221,6 +221,85 @@ Merchantrouter.get("/merchant-payin/:id",async(req,res)=>{
         console.log(error)
     }
 });
+
+// Get gateway cost history with filters
+Merchantrouter.get('/:merchantId/gateway-history', async (req, res) => {
+  try {
+    const { merchantId } = req.params;
+    const { period, customStart, customEnd } = req.query;
+
+    // Find the merchant
+    const merchant = await Merchantkey.findById(merchantId);
+    if (!merchant) {
+      return res.status(404).json({ message: 'Merchant not found' });
+    }
+
+    let filteredHistory = [...merchant.getwaycostHistory];
+    
+    // Apply filters based on the period
+    if (period) {
+      const now = moment();
+      
+      switch (period) {
+        case 'today':
+          filteredHistory = filteredHistory.filter(entry => 
+            moment(entry.updatedAt).isSame(now, 'day')
+          );
+          break;
+          
+        case 'tomorrow':
+          const tomorrow = now.clone().add(1, 'day');
+          filteredHistory = filteredHistory.filter(entry => 
+            moment(entry.updatedAt).isSame(tomorrow, 'day')
+          );
+          break;
+          
+        case 'month':
+          filteredHistory = filteredHistory.filter(entry => 
+            moment(entry.updatedAt).isSame(now, 'month')
+          );
+          break;
+          
+        case 'year':
+          filteredHistory = filteredHistory.filter(entry => 
+            moment(entry.updatedAt).isSame(now, 'year')
+          );
+          break;
+          
+        case 'custom':
+          if (!customStart || !customEnd) {
+            return res.status(400).json({ message: 'Custom range requires both start and end dates' });
+          }
+          const startDate = moment(customStart);
+          const endDate = moment(customEnd);
+          
+          filteredHistory = filteredHistory.filter(entry => 
+            moment(entry.updatedAt).isBetween(startDate, endDate, null, '[]')
+          );
+          break;
+          
+        default:
+          return res.status(400).json({ message: 'Invalid period specified' });
+      }
+    }
+
+    // Sort by date (newest first)
+    filteredHistory.sort((a, b) => b.updatedAt - a.updatedAt);
+
+    res.json({
+      merchantId,
+      merchantName: merchant.name,
+      currentGatewayCost: merchant.getwaycost,
+      history: filteredHistory,
+      count: filteredHistory.length,
+      totalChange: filteredHistory.reduce((sum, entry) => sum + entry.amount, 0)
+    });
+
+  } catch (error) {
+    console.error('Error fetching gateway history:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 // ----------------------merchant-payout-----------------------------
 Merchantrouter.get("/merchant-payout/:id",async(req,res)=>{
     try {

@@ -55,13 +55,32 @@ Adminroute.get("/single-user-payin/:id",async(req,res)=>{
 // Updated Admin route for commissions
 Adminroute.put('/users-commissions/:id', async (req, res) => {
     try {
-        const { withdracommission, depositcommission, paymentMethod, paymentBrand } = req.body;
-        
-        // Validate commission values
-        if (typeof withdracommission !== 'number' || typeof depositcommission !== 'number') {
+        let { withdracommission, depositcommission, paymentMethod, paymentBrand } = req.body;
+        console.log('Received request body:', req.body);
+
+        // Convert string numbers to actual numbers if they're string representations
+        if (typeof withdracommission === 'string') {
+            withdracommission = parseFloat(withdracommission);
+        }
+        if (typeof depositcommission === 'string') {
+            depositcommission = parseFloat(depositcommission);
+        }
+
+        // Validate commission values are now valid numbers
+        if (typeof withdracommission !== 'number' || isNaN(withdracommission) ||
+            typeof depositcommission !== 'number' || isNaN(depositcommission)) {
             return res.status(400).json({ 
                 success: false, 
-                message: "Commission values must be numbers" 
+                message: "Commission values must be valid numbers" 
+            });
+        }
+
+        // Validate commission ranges (0-100 as example)
+        if (withdracommission < 0 || withdracommission > 100 ||
+            depositcommission < 0 || depositcommission > 100) {
+            return res.status(400).json({
+                success: false,
+                message: "Commission values must be between 0 and 100"
             });
         }
 
@@ -98,10 +117,30 @@ Adminroute.put('/users-commissions/:id', async (req, res) => {
         
         // Only update paymentMethod if it's provided
         if (paymentMethod) {
+            // Validate each payment method (optional)
+            const validMethods = ['Bkash P2C', 'Nagad P2C', 'Bkash P2P', 'Nagad P2P']; // Add all valid methods
+            const invalidMethods = paymentMethod.filter(method => !validMethods.includes(method));
+            
+            if (invalidMethods.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid payment methods: ${invalidMethods.join(', ')}`
+                });
+            }
+            
             updateData.paymentMethod = paymentMethod;
         }
         
         if (paymentBrand) {
+            // Validate payment brand (optional)
+            const validBrands = ['bKash', 'Nagad', 'Rocket', 'Upay']; // Add all valid brands
+            if (!validBrands.includes(paymentBrand)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid payment brand. Must be one of: ${validBrands.join(', ')}`
+                });
+            }
+            
             updateData.paymentbrand = paymentBrand;
         }
 
@@ -111,9 +150,17 @@ Adminroute.put('/users-commissions/:id', async (req, res) => {
             { $set: updateData },
             { 
                 new: true, 
-                runValidators: true // Ensures schema validations run
+                runValidators: true, // Ensures schema validations run
+                context: 'query' // Needed for some validation to work properly
             }
         ).select('-password -__v'); // Exclude sensitive fields
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Agent not found after update attempt"
+            });
+        }
 
         res.status(200).json({ 
             success: true, 
@@ -371,7 +418,7 @@ Adminroute.put('/users/:id/password', async (req, res) => {
 
     const updatedUser = await UserModel.findByIdAndUpdate(
       req.params.id,
-      { password: newPassword },
+      { password: hashedPassword }, // Use the hashed password here instead of newPassword
       { new: true }
     ).select('-password -__v');
 
@@ -1378,7 +1425,21 @@ Adminroute.get('/analytics', async (req, res) => {
   }
 });
 
+// Route to get the total gateway cost of all merchants
+Adminroute.get('/total-getwaycost', async (req, res) => {
+  try {
+    const merchants = await Merchantkey.find();
 
+    // Calculate the total getwaycost
+    const totalGetwaycost = merchants.reduce((total, merchant) => total + (merchant.getwaycost || 0), 0);
+
+    // Return the total gateway cost
+    res.status(200).json({ totalGetwaycost });
+  } catch (error) {
+    console.error('Error fetching total getwaycost:', error);
+    res.status(500).json({ error: 'An error occurred while fetching the total gateway cost.' });
+  }
+});
 // -----------------------api-key-----------------------------------
 
 // POST - Create new merchant

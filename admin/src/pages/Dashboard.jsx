@@ -33,7 +33,7 @@ const Dashboard = () => {
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
   const token = localStorage.getItem('authToken');
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
+  const [getwaycost,setgetwaycost]=useState();
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
@@ -53,7 +53,23 @@ const Dashboard = () => {
         setLoading(false);
       }
     };
-
+  const fetchgetwaycost= async () => {
+      try {
+        const response = await axios.get(`${base_url}/api/admin/total-getwaycost`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        setgetwaycost(response.data.totalGetwaycost)
+        setError(null);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to fetch analytics');
+        console.error('Error fetching analytics:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchgetwaycost();
     fetchAnalytics();
   }, [period, base_url, token]);
 
@@ -131,6 +147,15 @@ const Dashboard = () => {
           (analyticsData.statusCounts.payin.pending + analyticsData.statusCounts.payout.pending) : 0,
         rejected: analyticsData ? 
           (analyticsData.statusCounts.payin.rejected + analyticsData.statusCounts.payout.rejected) : 0
+      }
+    },
+        {
+      title: 'Total Revenue',
+      value:`৳${getwaycost}`,
+      icon: <FiCheckCircle className="w-6 h-6" />,
+      isPositive: true,
+      gradient: 'from-amber-500 to-orange-500',
+      data: {
       }
     }
   ];

@@ -158,6 +158,7 @@ const Mpayment = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-6 py-3 text-left text-sm font-[700] text-gray-700 uppercase">ID</th>
                       <th className="px-6 py-3 text-left text-sm font-[700] text-gray-700 uppercase">Name</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
@@ -168,8 +169,11 @@ const Mpayment = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {requests.map((request) => (
+                    {requests.map((request,i) => (
                       <tr key={request._id} className="hover:bg-gray-50">
+                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {i+1}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {request.name}
                         </td>
@@ -191,7 +195,7 @@ const Mpayment = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
                             onClick={() => viewDetails(request)}
-                            className="p-2 bg-blue-500 text-white rounded-md"
+                            className="p-2 cursor-pointer border-blue-500 border-[1px] hover:bg-transparent hover:text-blue-500 transition-all duration-150 bg-blue-500 text-white rounded-md"
                             title="View"
                           >
                             <FaEye />
@@ -265,7 +269,7 @@ const Mpayment = () => {
                   name="name"
                   value={newRequest.name}
                   onChange={handleNewRequestChange}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full outline-theme p-2 border border-gray-300 rounded-md"
                   required
                 />
               </div>
@@ -276,7 +280,7 @@ const Mpayment = () => {
                   name="email"
                   value={newRequest.email}
                   onChange={handleNewRequestChange}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 outline-theme border border-gray-300 rounded-md"
                   required
                 />
               </div>
@@ -287,7 +291,7 @@ const Mpayment = () => {
                   name="amount"
                   value={newRequest.amount}
                   onChange={handleNewRequestChange}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 outline-theme border border-gray-300 rounded-md"
                   required
                 />
               </div>
@@ -297,13 +301,13 @@ const Mpayment = () => {
                   name="provider"
                   value={newRequest.provider}
                   onChange={handleNewRequestChange}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border outline-theme border-gray-300 rounded-md"
                   required
                 >
                   <option value="">Select Provider</option>
                   <option value="bank transfer">Bank Transfer</option>
-                  <option value="paypal">PayPal</option>
-                  <option value="stripe">Stripe</option>
+                  <option value="bdt">BDT</option>
+                  <option value="usdt">USDT</option>
                 </select>
               </div>
             </div>

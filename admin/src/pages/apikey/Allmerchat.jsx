@@ -171,6 +171,7 @@ const Allmerchat = () => {
                     <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">ID</th>
                     <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Name</th>
                     <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Getway Cost</th>
                     <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Website URL</th>
                     <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Deposit Commission</th>
                     <th className="px-6 py-3 text-left text-sm font-[700]  text-gray-700 uppercase tracking-wider">Withdraw Commission</th>
@@ -183,16 +184,17 @@ const Allmerchat = () => {
                     merchants.map((merchant,i) => (
                       <tr key={merchant._id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{i+1}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{merchant.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{merchant.email}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{merchant?.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{merchant?.email}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm  font-[700] text-green-600">{merchant?.getwaycost} BDT</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <a href={merchant.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            {merchant.websiteUrl}
+                            {merchant?.websiteUrl}
                           </a>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{merchant?.depositCommission}%</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{merchant?.withdrawCommission}%</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{merchant.apiKey}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{merchant?.apiKey}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <button
                             onClick={() => handleEdit(merchant)}

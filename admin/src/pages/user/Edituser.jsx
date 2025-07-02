@@ -527,7 +527,7 @@ const Edituser = () => {
                   <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mr-4">
                     Total: {bankaccount.length}
                   </span>
-                  <button 
+                  {/* <button 
                     onClick={() => {
                       setEditingAccount({
                         provider: agentData.paymentMethod,
@@ -548,7 +548,7 @@ const Edituser = () => {
                     className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm flex items-center"
                   >
                     <FaPlus className="mr-1" /> Add Account
-                  </button>
+                  </button> */}
                 </div>
               </div>
 
@@ -831,104 +831,185 @@ const Edituser = () => {
         )}
 
         {/* Bank Account Edit/Add Modal */}
-        {isEditModalOpen && (
-          <div className="fixed inset-0 bg-[rgba(0,0,0,0.5)] bg-opacity-50 flex items-center justify-center z-[1000]">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  {editingAccount._id ? 'Edit Account' : 'Add New Account'}
-                </h3>
-                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-500 hover:text-gray-700">
-                  <FaTimes />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
-                  <input
-                    type="text"
-                    value={editingAccount.provider}
-                    onChange={(e) => setEditingAccount({...editingAccount, provider: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                  <input
-                    type="text"
-                    value={editingAccount.accountNumber}
-                    onChange={(e) => setEditingAccount({...editingAccount, accountNumber: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    readOnly={!!editingAccount._id}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shop Name</label>
-                  <input
-                    type="text"
-                    value={editingAccount.shopName}
-                    onChange={(e) => setEditingAccount({...editingAccount, shopName: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                  <input
-                    type="text"
-                    value={editingAccount.username}
-                    onChange={(e) => setEditingAccount({...editingAccount, username: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                  <input
-                    type="text"
-                    value={editingAccount.password}
-                    onChange={(e) => setEditingAccount({...editingAccount, password: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Wallet Type</label>
-                  <select
-                    value={editingAccount.walletType}
-                    onChange={(e) => setEditingAccount({...editingAccount, walletType: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="personal">Personal</option>
-                    <option value="business">Business</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    value={editingAccount.status}
-                    onChange={(e) => setEditingAccount({...editingAccount, status: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                <div className="flex justify-end space-x-3">
-                  <button
-                    onClick={() => setIsEditModalOpen(false)}
-                    className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-md"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => handleSaveAccount(editingAccount)}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
+ {isEditModalOpen && (
+  <div className="fixed inset-0 bg-[rgba(0,0,0,0.5)] bg-opacity-50 flex items-center justify-center z-[1000]">
+    <div className="bg-white rounded-lg p-6 w-full max-w-md">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">
+          {editingAccount._id ? 'Edit Account' : 'Add New Account'}
+        </h3>
+        <button onClick={() => setIsEditModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+          <FaTimes />
+        </button>
+      </div>
+      <div className="space-y-4">
+        {/* Provider - Payment Method Dropdown */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Provider - Payment Method</label>
+          <select
+            value={editingAccount.provider}
+            onChange={(e) => setEditingAccount({...editingAccount, provider: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+          >
+            <option value="">Select Provider Payment Method</option>
+            {agentData?.paymentMethod?.map((method) => (
+              <option key={method} value={method}>
+                {agentData?.username} ({method})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Account Number */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+          <input
+            type="text"
+            value={editingAccount.accountNumber}
+            onChange={(e) => setEditingAccount({...editingAccount, accountNumber: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            placeholder="01XXXXXXXXX (11 digits)"
+            maxLength="11"
+            readOnly={!!editingAccount._id}
+          />
+        </div>
+
+        {/* Shop Name */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Shop Name</label>
+          <input
+            type="text"
+            value={editingAccount.shopName}
+            onChange={(e) => setEditingAccount({...editingAccount, shopName: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            placeholder="My Shop"
+          />
+        </div>
+
+        {/* Fields for Bkash P2C */}
+        {editingAccount.provider === 'Bkash P2C' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <input
+                type="text"
+                value={editingAccount.username}
+                onChange={(e) => setEditingAccount({...editingAccount, username: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Username"
+              />
             </div>
-          </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input
+                type="text"
+                value={editingAccount.password}
+                onChange={(e) => setEditingAccount({...editingAccount, password: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Password"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">App Key</label>
+              <input
+                type="text"
+                value={editingAccount.appKey}
+                onChange={(e) => setEditingAccount({...editingAccount, appKey: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="App Key"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">App Secret Key</label>
+              <input
+                type="text"
+                value={editingAccount.appSecretKey}
+                onChange={(e) => setEditingAccount({...editingAccount, appSecretKey: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="App Secret Key"
+              />
+            </div>
+          </>
         )}
+
+        {/* Fields for Nagad P2C */}
+        {editingAccount.provider === 'Nagad P2C' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Public Key</label>
+              <input
+                type="text"
+                value={editingAccount.publicKey}
+                onChange={(e) => setEditingAccount({...editingAccount, publicKey: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Public Key"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Private Key</label>
+              <input
+                type="text"
+                value={editingAccount.privateKey}
+                onChange={(e) => setEditingAccount({...editingAccount, privateKey: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Private Key"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Wallet Type for all methods */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Wallet Type</label>
+          <select
+            value={editingAccount.walletType}
+            onChange={(e) => setEditingAccount({...editingAccount, walletType: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+          >
+            <option value="personal">Personal</option>
+            <option value="business">Business</option>
+            {/* Additional wallet types if needed */}
+            <option value="M Plush">M Plush</option>
+            <option value="Daily 300K">Daily 300K</option>
+            <option value="Daily 30K">Daily 30K</option>
+          </select>
+        </div>
+
+        {/* Status */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select
+            value={editingAccount.status}
+            onChange={(e) => setEditingAccount({...editingAccount, status: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={() => setIsEditModalOpen(false)}
+            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-md"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => handleSaveAccount(editingAccount)}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
         </div>
               </section>
     
