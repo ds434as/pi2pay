@@ -431,13 +431,13 @@ const Allpayin = () => {
                                 >
                                   <FaEye />
                                 </button>
-                                <button
+                                {/* <button
                                   onClick={() => handleEdit(transaction._id)}
                                   className="p-2 bg-yellow-500 cursor-pointer text-white rounded-md hover:bg-yellow-100 transition-colors"
                                   title="Edit"
                                 >
                                   <FaEdit />
-                                </button>
+                                </button> */}
                                 <button
                                   onClick={() => handleStatusChange(transaction)}
                                   className="p-2 bg-purple-500 cursor-pointer text-white rounded-md hover:bg-purple-100 transition-colors"

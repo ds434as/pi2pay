@@ -234,15 +234,15 @@ const payment_bkash = async (req, res) => {
   console.log('bkash-callback-data', data);
   try {
     const transaction = await PayinTransaction.findOne({
-      paymentId: data.paymentID
-    });
-    if (!transaction) {
+			paymentId: data.paymentID
+		});
+		if (!transaction) {
       console.log('bkash-callback-no-transaction-with-paymentID', data.paymentID);
-      return res.status(200).json({
+			return res.status(200).json({
         success: false,
         message: "There is no transaction with provided payment ID, " + data.paymentID + "."
       });  
-    }
+		}
 
     res.status(200).json({
       success: true,
@@ -433,12 +433,12 @@ const fetch_bkash = async (paymentID) => {
   try {
     
     const transaction = await PayinTransaction.findOne({
-      paymentId: paymentID
-    });
-    if (!transaction) {
+			paymentId: paymentID
+		});
+		if (!transaction) {
       console.log('bkash-fetch-no-transaction-with-paymentID', paymentID);
-      return;  
-    }
+			return;  
+		}
 
     const token = await get_token_bkash();
     if (!token) {

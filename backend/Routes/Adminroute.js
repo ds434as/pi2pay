@@ -787,12 +787,12 @@ Adminroute.delete('/payin/:id', async (req, res) => {
 Adminroute.patch('/payin/:id/status', async (req, res) => {
   try {
     const { status, update_by } = req.body;
-    
+    console.log(req.body)
     if (!status) {
       return res.status(400).json({ message: 'Status is required' });
     }
-    
-    const transaction = await PayinTransaction.findByIdAndUpdate(
+        const transaction = await PayinTransaction.findByIdAndUpdate({_id:req.params.id});
+    const transaction2 = await PayinTransaction.findByIdAndUpdate(
       req.params.id,
       { 
         status,
@@ -805,9 +805,36 @@ Adminroute.patch('/payin/:id/status', async (req, res) => {
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
     }
-    
-    res.json(transaction);
+    const bankaccount=await BankAccount.findOne({accountNumber:transaction.agentAccount});
+ if(!bankaccount){
+  return res.send({success:false,message:"Agent did not find."})
+ }
+    if (status === "completed") {
+    bankaccount.total_order+=1;
+         bankaccount.total_recieved+=transaction.expectedAmount;
+         bankaccount.save();
+  
+        //  ------------------merchant---------------------
+        const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
+        const matcheduser=await UserModel.findById({_id:bankaccount.user_id});
+        const commissionsmoney=(transaction.expectedAmount/100)*merchant_info.depositCommission;
+        merchant_info.balance+=transaction.expectedAmount;
+        merchant_info.balance-=commissionsmoney;
+        merchant_info.getwaycost+=commissionsmoney;
+        merchant_info.total_payin+=transaction.expectedAmount;
+        merchant_info.save();
+        //  ------------------update-agent-------------------
+        const comissionmoney=(transaction.expectedAmount/100)*matcheduser.depositcommission;
+        console.log(comissionmoney)
+        matcheduser.balance-=transaction.expectedAmount;
+        matcheduser.balance+=comissionmoney;
+        matcheduser.providercost+=comissionmoney;
+        matcheduser.totalpayment+=transaction.expectedAmount;
+        matcheduser.save();
+    }
+    res.json(transaction2);
   } catch (err) {
+    console.log(err)
     res.status(400).json({ message: err.message });
   }
 });
