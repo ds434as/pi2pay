@@ -1019,6 +1019,7 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
       matcheduser.providercost+=agentcomissionmoney;
       matcheduser.totalpayout+=forwardedSms.transactionAmount;
       matcheduser.save();
+      console.log("dff",forwardedSms)
          //  ------------------merchant---------------------
       const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
       merchant_info.balance-=forwardedSms.transactionAmount;
@@ -1401,4 +1402,17 @@ Paymentrouter.post("/p2c/bkash/payment", payment_bkash);
 Paymentrouter.post("/p2c/bkash/callback", callback_bkash);
 Paymentrouter.post("/bkash",payment_bkash)
 
+
+Paymentrouter.get("/transaction-status/:id",async(req,res)=>{
+  try {
+    console.log(req.params.id)
+    const find_transaction=await PayinTransaction.findOne({paymentId:req.params.id});
+    if(!find_transaction){
+        return res.send({success:false,message:"Transaction Not Found!"})
+    }
+    res.send({success:true,data:find_transaction})
+  } catch (error) {
+    console.log(error)
+  }
+})
 module.exports = Paymentrouter;

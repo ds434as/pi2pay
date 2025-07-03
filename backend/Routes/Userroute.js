@@ -671,16 +671,5 @@ Userrouter.get("/bank-accunts/:id",async(req,res)=>{
 })
 
 
-Userrouter.get("/transaction-status/:id",async(req,res)=>{
-  try {
-    console.log(req.params.id)
-    const find_transaction=await PayinTransaction.findOne({paymentId:req.params.id});
-    if(!find_transaction){
-        return res.send({success:false,message:"Transaction Not Found!"})
-    }
-    res.send({success:true,data:find_transaction})
-  } catch (error) {
-    console.log(error)
-  }
-})
+
 module.exports = Userrouter;

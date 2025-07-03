@@ -563,7 +563,7 @@ Adminroute.get('/bank-account/:id', async (req, res) => {
 Adminroute.put('/update-bank-account/:id',async (req, res) => {
   try {
     const { provider, accountNumber, shopName, walletType } = req.body;
-    
+    console.log(req.params.id)
     // Validate required fields
     if (!provider || !accountNumber || !shopName) {
       return res.status(400).json({ 
@@ -582,7 +582,7 @@ Adminroute.put('/update-bank-account/:id',async (req, res) => {
     }
 
     const bankAccount = await BankAccount.findOneAndUpdate(
-      { _id: req.params.id, user_id: req.user._id },
+      { _id: req.params.id},
       req.body,
       { new: true, runValidators: true }
     );
