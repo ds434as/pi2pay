@@ -147,10 +147,10 @@ const payment_bkash = async (req, res) => {
     // Update BKASH credentials based on selected account
     if (selectedAccount) {
       BKASH_URL = 'https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/checkout';
-           BKASH_USERNAME = "01727631026";
-      BKASH_PASSWORD = "IJRi)_yh<;6";
-      BKASH_APP_KEY = "W5FsUsUleKS7xKbDUTkUbJYntc";
-      BKASH_APP_SECRET_KEY = "6eGhUEm5sDc8tWx8Q5H1tItNcoeSxBJTQxcf7ON5yUGHdYUymdab";
+      BKASH_USERNAME = selectedAccount.username;
+      BKASH_PASSWORD = selectedAccount.password;
+      BKASH_APP_KEY = selectedAccount.appKey;
+      BKASH_APP_SECRET_KEY = selectedAccount.appSecretKey;
     }
 
     const token = await get_token_bkash();
@@ -282,11 +282,18 @@ const payment_bkash = async (req, res) => {
            transaction.status="completed";
            transaction.save();
            console.log("completed")
-            const find_account=await BankAccount.findOne({accountNumber:transaction.agentAccount});
+      }
+      if (executeObj.data.transactionStatus === 'Initiated') {
+        return fetch_bkash(data.paymentID);
+      } else {
+        let transaction_status = 'processing';
+         
+        if (executeObj.data.transactionStatus === 'Completed') {
+          transaction_status = 'completed';
+          const find_account=await BankAccount.findOne({accountNumber:transaction.agentAccount});
           const matched_user=await UserModel.findById({_id:find_account.user_id});
           const usercomissionmoney=(transaction.expectedAmount/100)*matched_user.depositcommission;
            transaction.status="completed";
-           transaction.save();
           find_account.total_order+=1;
           find_account.total_recieved+=transaction.expectedAmount;
           find_account.save();
@@ -302,15 +309,6 @@ const payment_bkash = async (req, res) => {
           matchedmerchant.total_payin+=transaction.expectedAmount;
           matchedmerchant.providercost+=comissionmoney;
           matchedmerchant.save();
-      }
-      if (executeObj.data.transactionStatus === 'Initiated') {
-        return fetch_bkash(data.paymentID);
-      } else {
-        let transaction_status = 'processing';
-         
-        if (executeObj.data.transactionStatus === 'Completed') {
-          transaction_status = 'completed';
-         
         } else if (executeObj.data.transactionStatus === 'Pending Authorized') {
           transaction_status = 'pending';
         } else if (executeObj.data.transactionStatus === 'Expired') {

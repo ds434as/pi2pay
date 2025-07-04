@@ -615,14 +615,14 @@ Adminroute.delete('/delete-bank-account/:id', async (req, res) => {
     const bankAccount = await BankAccount.findOneAndDelete({ 
       _id: req.params.id, 
     });
-
+   const matheduser=await UserModel.findById({_id:bankAccount.user_id})
     if (!bankAccount) {
       return res.status(404).json({ 
         success: false, 
         message: 'Bank account not found' 
       });
     }
-
+     matheduser.totalwallet-=1;
     res.json({
       success: true,
       message: 'Bank account deleted successfully'
