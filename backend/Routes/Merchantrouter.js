@@ -210,13 +210,12 @@ Merchantrouter.get("/merchant-payment/:id",async(req,res)=>{
 // ---------------merchant-payin---------------------
 Merchantrouter.get("/merchant-payin/:id",async(req,res)=>{
     try {
-        const merchant_payin=await PayinTransaction.find({merchantid:req.params.id});
+        const merchant_payin=await PayinTransaction.find({merchantid:req.params.id}).sort({ createdAt: -1 });;
         console.log(req.params.id)
         if(!merchant_payin){
            return res.send({success:false,message:"Merchant Payin did not find!"})
         }
         res.send({success:true,payment:merchant_payin});
-
     } catch (error) {
         console.log(error)
     }
@@ -314,8 +313,6 @@ Merchantrouter.get("/merchant-payout/:id",async(req,res)=>{
         console.log(error)
     }
 })
-
-
 // Route to get all transaction data and counts by merchantid
 Merchantrouter.get('/transactions/:merchantid', async (req, res) => {
   try {

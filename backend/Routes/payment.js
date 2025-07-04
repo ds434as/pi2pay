@@ -296,7 +296,7 @@ Paymentrouter.post("/checkout", async (req, res) => {
         const match_payment = await PayinTransaction.findOne({ paymentId });
         if (!match_payment) {
             console.log(`Payment ID ${paymentId} not found`);
-            return res.status(404).send({ success: false, message: "Payment ID not found!" });
+            return res.send({ success: false, message: "Payment ID not found!" });
         }
 
         const expectedAmount = Number(match_payment.expectedAmount || 0);
