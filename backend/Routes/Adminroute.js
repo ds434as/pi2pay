@@ -612,20 +612,44 @@ Adminroute.put('/update-bank-account/:id',async (req, res) => {
 // Delete a bank account
 Adminroute.delete('/delete-bank-account/:id', async (req, res) => {
   try {
-    const bankAccount = await BankAccount.findOneAndDelete({ 
-      _id: req.params.id, 
-    });
-   const matheduser=await UserModel.findById({_id:bankAccount.user_id})
+    // First find the bank account to get the user_id
+    const bankAccount = await BankAccount.findOne({ _id: req.params.id });
+    
     if (!bankAccount) {
       return res.status(404).json({ 
         success: false, 
         message: 'Bank account not found' 
       });
     }
-     matheduser.totalwallet-=1;
+
+    // Find the user
+    const matchedUser = await UserModel.findById(bankAccount.user_id);
+    
+    if (!matchedUser) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Delete the bank account
+    await BankAccount.findOneAndDelete({ _id: req.params.id });
+
+    // Remove the corresponding agent account if it exists
+    // Assuming the bank account's accountNumber matches the agent account's accountNumber
+    matchedUser.agentAccounts = matchedUser.agentAccounts.filter(
+      account => account.accountNumber !== bankAccount.accountNumber
+    );
+    
+    // Decrement the total wallet count
+    matchedUser.totalwallet -= 1;
+    
+    // Save the updated user
+    await matchedUser.save();
+
     res.json({
       success: true,
-      message: 'Bank account deleted successfully'
+      message: 'Bank account and corresponding agent account deleted successfully'
     });
   } catch (error) {
     console.error('Error deleting bank account:', error);

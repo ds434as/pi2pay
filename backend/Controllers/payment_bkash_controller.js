@@ -305,6 +305,7 @@ const payment_bkash = async (req, res) => {
   
           const matchedmerchant=await Merchantkey.findById({_id:transaction.merchantid})  ;
           const comissionmoney=(transaction.expectedAmount/100)*matchedmerchant.depositCommission;
+          console.log("merchant",matchedmerchant);
           matchedmerchant.balance+=transaction.expectedAmount;
           matchedmerchant.balance-=comissionmoney;
           matchedmerchant.total_payin+=transaction.expectedAmount;

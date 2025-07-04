@@ -253,7 +253,7 @@ Userrouter.post('/add-bank-account', async (req, res) => {
   try {
     const { provider, accountNumber, shopName, walletType, isDefault } = req.body;
     const userId = req.user._id; // Assuming you have user info from authentication
-    
+    console.log(userId)
     // Validate required fields
     if (!provider || !accountNumber || !shopName) {
       return res.status(400).json({ 
