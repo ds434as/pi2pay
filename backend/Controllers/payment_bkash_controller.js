@@ -292,8 +292,9 @@ const payment_bkash = async (req, res) => {
           transaction_status = 'completed';
           const find_account=await BankAccount.findOne({accountNumber:transaction.agentAccount});
           const matched_user=await UserModel.findById({_id:find_account.user_id});
+          console.log(find_account);
+          console.log(matched_user)
           const usercomissionmoney=(transaction.expectedAmount/100)*matched_user.depositcommission;
-           transaction.status="completed";
           find_account.total_order+=1;
           find_account.total_recieved+=transaction.expectedAmount;
           find_account.save();
