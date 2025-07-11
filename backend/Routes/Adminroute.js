@@ -1026,6 +1026,7 @@ Adminroute.delete("/forward-sms/:id",async(req,res)=>{
 const moment = require('moment');
 const Merchantkey = require('../Models/Merchantkey');
 const MerchantPaymentRequest = require('../Models/MerchantPaymentRequest');
+const Merchantwithdraw = require('../Models/Merchantwithdraw');
 
 Adminroute.get('/analytics', async (req, res) => {
   try {
@@ -1846,4 +1847,151 @@ Adminroute.put('/disable-all-payments/:userId', async (req, res) => {
   }
 });
 
+
+// Get all withdrawal requests with filtering and pagination
+Adminroute.get('/withdraw-requests', async (req, res) => {
+  try {
+    // Extract query parameters
+    const { page = 1, limit = 10, status, merchant, paymentMethod, fromDate, toDate } = req.query;
+    const skip = (page - 1) * limit;
+
+    // Build the query object
+    const query = {};
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (merchant) {
+      query.merchant = merchant;
+    }
+    
+    if (paymentMethod) {
+      query.paymentMethod = paymentMethod;
+    }
+    
+    // Date range filtering
+    if (fromDate || toDate) {
+      query.createdAt = {};
+      if (fromDate) {
+        query.createdAt.$gte = new Date(fromDate);
+      }
+      if (toDate) {
+        query.createdAt.$lte = new Date(toDate);
+      }
+    }
+
+    // Get total count for pagination
+    const total = await Merchantwithdraw.countDocuments(query);
+
+    // Get paginated data
+    const requests = await Merchantwithdraw.find(query)
+      .populate('merchant', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    res.json({
+      success: true,
+      data: requests,
+      pagination: {
+        total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: Number(page),
+        itemsPerPage: Number(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching withdrawal requests:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch withdrawal requests',
+      error: error.message 
+    });
+  }
+});
+
+// Get a specific withdrawal request by ID
+Adminroute.get('/withdraw-requests/:id', async (req, res) => {
+  try {
+    const request = await Merchantwithdraw.findById(req.params.id)
+      .populate('merchant', 'name email phone');
+      
+    if (!request) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Withdrawal request not found' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: request
+    });
+  } catch (error) {
+    console.error('Error fetching withdrawal request:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch withdrawal request',
+      error: error.message 
+    });
+  }
+});
+
+// Delete a withdrawal request
+Adminroute.delete('/withdraw-requests/:id', async (req, res) => {
+  try {
+    const deletedRequest = await Merchantwithdraw.findByIdAndDelete(req.params.id);
+    
+    if (!deletedRequest) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Withdrawal request not found' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Withdrawal request deleted successfully',
+      data: deletedRequest
+    });
+  } catch (error) {
+    console.error('Error deleting withdrawal request:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to delete withdrawal request',
+      error: error.message 
+    });
+  }
+});
+// Update withdrawal request status
+Adminroute.patch('/withdraw-requests/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    if (!['pending', 'approved', 'rejected', 'processed'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value' });
+    }
+    
+    const updatedRequest = await Merchantwithdraw.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    ).populate('merchant', 'name email'); // Adjust fields as needed
+     if(status=="rejected"){
+              const matchedmerchant=await Merchantkey.findById({_id:updatedRequest.merchant._id});
+              matchedmerchant.balance+=updatedRequest.amount;
+              matchedmerchant.save();
+              console.log(matchedmerchant)
+     }
+    if (!updatedRequest) {
+      return res.status(404).json({ message: 'Withdrawal request not found' });
+    }
+    
+    res.json(updatedRequest);
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ message: error.message });
+  }
+});
 module.exports = Adminroute;

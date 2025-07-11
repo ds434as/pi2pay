@@ -15,6 +15,16 @@ Userrouter.use(authorizeuser);
 // ----------------------------dashboard----------------------------
 Userrouter.get("/dashboard-data/:id", async (req, res) => {
   try {
+    // Get user data first
+    const user = await UserModel.findById(req.params.id).select('-password -__v');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
     // Get all bank accounts for the user
     const all_bankaccounts = await BankAccount.find({ user_id: req.params.id });
     
@@ -124,6 +134,25 @@ Userrouter.get("/dashboard-data/:id", async (req, res) => {
     
     // Prepare the response
     const dashboardData = {
+      user: {
+        id: user._id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        balance: user.balance,
+        currentstatus: user.currentstatus,
+        totalpayment: user.totalpayment,
+        totalpayout: user.totalpayout,
+        totalprepayment: user.totalprepayment,
+        providercost: user.providercost,
+        currency: user.currency,
+        paymentMethod: user.paymentMethod,
+        paymentbrand: user.paymentbrand,
+        agentAccounts: user.agentAccounts,
+        createdAt: user.createdAt
+      },
       summary: {
         bankAccounts: bankAccountsSummary,
         payin: payinStats,
@@ -669,7 +698,257 @@ Userrouter.get("/bank-accunts/:id",async(req,res)=>{
     console.log(error)
   }
 })
+// ---------------all-payin---------------
 
+// Get all payin transactions by user ID
+Userrouter.get('/user-payin/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { status } = req.query;
+
+
+    // Find user and get agent accounts
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Get all agent account numbers
+    const agentAccounts = user.agentAccounts.map(account => account.accountNumber);
+    if (agentAccounts.length === 0) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    // Build query
+    const query = { agentAccount: { $in: agentAccounts } };
+    
+    // Add status filter if provided
+    if (status && ['pending', 'completed', 'rejected', 'expired', 'suspended'].includes(status)) {
+      query.status = status;
+    }
+
+    // Find all matching transactions
+    const transactions = await PayinTransaction.find(query)
+      .sort({ createdAt: -1 })
+      .lean();
+console.log(transactions)
+    res.status(200).json({ success: true, data: transactions });
+
+  } catch (error) {
+    console.error('Error fetching payins:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: error.message 
+    });
+  }
+});
+// Get all payout transactions assigned to the current user (agent)
+// Route to get all payout transactions for a user's agent accounts with filtering
+Userrouter.get('/user-payouts/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { status, startDate, endDate, page = 1, limit = 10 } = req.query;
+
+    // 1. Find the user and their agent accounts
+    const user = await UserModel.findById(userId)
+      .select('name email role agentAccounts balance');
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Extract account numbers from agent accounts
+    const agentAccountNumbers = user.agentAccounts.map(acc => acc.accountNumber);
+
+    // 2. Build the query
+    const query = {
+      payeeAccount: { $in: agentAccountNumbers }
+    };
+
+    // Add status filter if provided
+    if (status) {
+      query.status = status;
+    }
+
+    // Add date range filter if provided
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    // 3. Get paginated results
+    const options = {
+      sort: { createdAt: -1 },
+      skip: (page - 1) * limit,
+      limit: parseInt(limit)
+    };
+
+    const [payouts, total] = await Promise.all([
+      PayoutTransaction.find(query, null, options),
+      PayoutTransaction.countDocuments(query)
+    ]);
+
+    // 4. Format the response
+    const response = {
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        balance: user.balance,
+        agentAccounts: user.agentAccounts
+      },
+      payouts: payouts.map(payout => ({
+        id: payout._id,
+        paymentId: payout.paymentId,
+        orderId: payout.orderId,
+        payeeAccount: payout.payeeAccount,
+        requestAmount: payout.requestAmount,
+        currency: payout.currency,
+        status: payout.status,
+        createdAt: payout.createdAt,
+        provider: payout.provider,
+        merchantId: payout.merchantid,
+        assignedAgent: payout.assignedAgent,
+        transactionDetails: {
+          transactionId: payout.transactionId,
+          sentAmount: payout.sentAmount
+        }
+      })),
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+      },
+      filters: {
+        status,
+        startDate,
+        endDate,
+        matchedAccountNumbers: agentAccountNumbers
+      }
+    };
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('Error fetching user payouts:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: error.message 
+    });
+  }
+});
+
+// Route to get all payin transactions for a user
+Userrouter.get('/user-payins/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { 
+      status, 
+      startDate, 
+      endDate, 
+      page = 1, 
+      limit = 10,
+      paymentType,
+      provider
+    } = req.query;
+
+    // 1. Find the user and their agent accounts (if needed)
+    const user = await UserModel.findById(userId)
+      .select('agentAccounts');
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // 2. Build the query
+    const query = {
+      $or: [
+        { userid: userId }, // Payins where user is the owner
+        { merchantid: userId }, // Payins where user is the merchant
+        { 'agentAccount': { $in: user.agentAccounts.map(acc => acc.accountNumber) } } // Payins to user's agent accounts
+      ]
+    };
+
+    // Add filters if provided
+    if (status) query.status = status;
+    if (paymentType) query.paymentType = paymentType;
+    if (provider) query.provider = provider;
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    // 3. Get paginated results
+    const options = {
+      sort: { createdAt: -1 },
+      skip: (page - 1) * limit,
+      limit: parseInt(limit)
+    };
+
+    const [payins, total] = await Promise.all([
+      PayinTransaction.find(query, null, options),
+      PayinTransaction.countDocuments(query)
+    ]);
+
+    // 4. Format the response
+    const response = {
+      success: true,
+      payins: payins.map(payin => ({
+        id: payin._id,
+        paymentId: payin.paymentId,
+        orderId: payin.orderId,
+        payerAccount: payin.payerAccount,
+        expectedAmount: payin.expectedAmount,
+        receivedAmount: payin.receivedAmount,
+        currency: payin.currency,
+        status: payin.status,
+        createdAt: payin.createdAt,
+        provider: payin.provider,
+        paymentType: payin.paymentType,
+        transactionId: payin.transactionId,
+        referenceId: payin.referenceId
+      })),
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+      },
+      filters: {
+        status,
+        startDate,
+        endDate,
+        paymentType,
+        provider
+      }
+    };
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('Error fetching user payins:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: error.message 
+    });
+  }
+});
 
 
 module.exports = Userrouter;

@@ -14,6 +14,7 @@ import {
 } from "react-icons/fa";
 import { FiArrowRightCircle, FiArrowLeftCircle } from "react-icons/fi";
 import { MdOutlineApproval } from "react-icons/md";
+import { MdOutlineMessage } from "react-icons/md";
 import { Link } from "react-router-dom";
 import { IoBatteryHalfOutline } from "react-icons/io5";
 import logo from "../../assets/pi2.png"
@@ -23,9 +24,9 @@ const Sidebar = ({ isOpen }) => {
       title: "Transactions",
       items: [
         { icon: <FaDownload />, label: "Pay In", path: "/pay-in" },
-        { icon: <MdOutlineApproval />, label: "Pay In Approval", path: "/pay-in-approval" },
+        // { icon: <MdOutlineApproval />, label: "Pay In Approval", path: "/pay-in-approval" },
         { icon: <FaUpload />, label: "Pay Out", path: "/pay-out" },
-        { icon: <MdOutlineApproval />, label: "Pay Out Approval", path: "/pay-out-approval" },
+        // { icon: <MdOutlineApproval />, label: "Pay Out Approval", path: "/pay-out-approval" },
       ],
     },
     {
@@ -54,6 +55,7 @@ const Sidebar = ({ isOpen }) => {
       items: [
         { icon: <FaPlusSquare />, label: "Add Bank Account", path: "/add-bank-account" },
         { icon: <FaCreditCard />, label: "Bank Accounts", path: "/bank-accounts" },
+        { icon: <MdOutlineMessage />, label: "Forward SMS", path: "/send-sms" },
         // { icon: <FaUserFriends />, label: "Sub User", path: "/sub-user" },
         // { icon: <FaLock />, label: "2FA", path: "/two-factor-auth" },
       ],

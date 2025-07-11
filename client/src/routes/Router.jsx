@@ -26,6 +26,8 @@ import Mpayment from "../pages/merchant/mpayment/Mpayment";
 import Masterprofile from "../pages/merchant/masterprofile/Masterprofile";
 import Masterpayin from "../pages/merchant/masterpayin/Masterpayin";
 import Masterpayout from "../pages/merchant/masterpayout/Masterpayout";
+import Sendsms from "../pages/sms/Sendsms";
+import Merchantwithdraw from "../pages/merchant/mwithdraw/Merchantwithdraw";
 
 const isAuthenticated = () => {
   return localStorage.getItem('authToken') !== null;
@@ -107,6 +109,10 @@ const router = createBrowserRouter([
       {
         path: "/merchant/payout",
         element: <Masterpayout />
+      },
+            {
+        path: "/merchant/withdraw",
+        element: <Merchantwithdraw />
       }
     ]
   },
@@ -129,6 +135,10 @@ const router = createBrowserRouter([
       { 
         path: "/pay-out",
         element: <Payout />
+      },
+            { 
+        path: "/send-sms",
+        element: <Sendsms />
       },
       { 
         path: "/pay-out-approval",

@@ -9,6 +9,7 @@ const MerchantPaymentRequest = require('../Models/MerchantPaymentRequest');
 const PayinTransaction = require('../Models/PayinTransaction');
 const PayoutTransaction = require('../Models/PayoutTransaction');
 const { v4: uuidv4 } = require('uuid');
+const Merchantwithdraw = require('../Models/Merchantwithdraw');
 
 // Middleware to protect routes
 const protect = async (req, res, next) => {
@@ -393,4 +394,89 @@ Merchantrouter.get('/transactions/:merchantid', async (req, res) => {
   }
 });
 
+// POST - Create a new withdrawal request
+// POST - Create a new withdrawal request
+Merchantrouter.post('/withdraw', async (req, res) => {
+  try {
+    const { merchant, amount, paymentMethod, paymentDetails } = req.body;
+
+    // Validate input
+    if (!merchant || !amount || !paymentMethod || !paymentDetails) {
+      return res.json({ success: false, message: "All fields are required" });
+    }
+
+    if (amount <= 0) {
+      return res.json({ success: false, message: "Withdrawal amount must be positive" });
+    }
+
+    // Find merchant and check balance
+    const matchedMerchant = await Merchantkey.findById(merchant);
+    if (!matchedMerchant) {
+      return res.json({ success: false, message: "Merchant not found" });
+    }
+
+    const MINIMUM_BALANCE = 50000;
+    const availableBalance = matchedMerchant.balance - MINIMUM_BALANCE;
+
+    if (amount > availableBalance) {
+      return res.json({ 
+        success: false, 
+        message: `Insufficient balance. You can withdraw maximum ${availableBalance} Taka while maintaining minimum balance of ${MINIMUM_BALANCE} Taka` 
+      });
+    }
+
+    // Create withdrawal request
+    const newRequest = new Merchantwithdraw({
+      merchant,
+      amount,
+      paymentMethod,
+      paymentDetails,
+      status: 'pending' // assuming you want to track status
+    });
+
+    const savedRequest = await newRequest.save();
+
+    // Update merchant balance
+    matchedMerchant.balance -= amount;
+    await matchedMerchant.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Withdrawal request successful",
+      data: savedRequest,
+      newBalance: matchedMerchant.balance
+    });
+
+  } catch (error) {
+    console.error("Withdrawal error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || "Internal server error" 
+    });
+  }
+});
+
+// GET - Retrieve all withdrawal requests
+Merchantrouter.get('/withdraw', async (req, res) => {
+  try {
+    const requests = await Merchantwithdraw.find().populate('merchant');
+    res.json(requests);
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// GET - Retrieve a specific withdrawal request by ID
+Merchantrouter.get('/withdraw/:id', async (req, res) => {
+  try {
+    const request = await Merchantwithdraw.findById(req.params.id).populate('merchant');
+    if (!request) {
+      return res.status(404).json({ message: 'Withdrawal request not found' });
+    }
+    res.json(request);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 module.exports = Merchantrouter;

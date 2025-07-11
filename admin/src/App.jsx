@@ -32,6 +32,7 @@ import Allmethod from './pages/allmethod/Allmethod'
 import Apikey from './pages/apikey/Apikey'
 import Merchantpayment from './pages/merchantpayment/Merchantpayment'
 import Allmerchat from './pages/apikey/Allmerchat'
+import Merchantwithdrwals from './pages/merchantwithdraw/Merchantwithdrwals'
 
 const ProtectedRoute = ({ children }) => {
   // Check if user data exists in localStorage
@@ -233,6 +234,12 @@ const App = () => {
         <Route exact path="/dashboard/settings/system" element={
           <ProtectedRoute>
             <System />
+          </ProtectedRoute>
+        }/>
+        
+     <Route exact path="/dashboard/merchant-withdrawal" element={
+          <ProtectedRoute>
+            <Merchantwithdrwals />
           </ProtectedRoute>
         }/>
 

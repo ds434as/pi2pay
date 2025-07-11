@@ -1,167 +1,308 @@
-import React, { useState } from 'react'
-import Header from '../../components/common/Header'
+import React, { useState, useEffect } from 'react';
+import Header from '../../components/common/Header';
 import Sidebar from '../../components/common/Sidebar';
 import { FiSearch } from 'react-icons/fi';
+import { FaFilter, FaRedo } from 'react-icons/fa';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
+import moment from 'moment';
 
 const Payin = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paymentId, setPaymentId] = useState('');
   const [trxId, setTrxId] = useState('');
+  const [status, setStatus] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1
+  });
+  
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
   const token = localStorage.getItem('authToken');
+  const user_info = JSON.parse(localStorage.getItem('userData'));
 
   const toggleSidebar = () => {
     setSidebarOpen((prev) => !prev);
   };
 
-  const handleSubmit = async () => {
-    if (!paymentId.trim() && !trxId.trim()) {
-      toast.error("At least one search parameter (Payment ID or TrxID) is required!");
-      return;
-    }
+  // Fetch payin transactions on component mount and page change
+  useEffect(() => {
+    fetchPayins();
+  }, [pagination.page]);
 
+  const fetchPayins = async () => {
     try {
       setIsLoading(true);
-      setHasSearched(true);
-      toast.loading('Filtering transactions...');
-      
-      const response = await axios.post(`${base_url}/api/user/filter-transaction`, {
-        paymentId: paymentId.trim(),
-        trxId: trxId.trim()
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }});
+      const response = await axios.get(
+        `${base_url}/api/user/user-payins/${user_info._id}`,
+        {
+          params: {
+            page: pagination.page,
+            limit: pagination.limit,
+            ...(status && { status }),
+            ...(startDate && { startDate: moment(startDate).format('YYYY-MM-DD') }),
+            ...(endDate && { endDate: moment(endDate).format('YYYY-MM-DD') }),
+            ...(paymentId && { paymentId }),
+            ...(trxId && { trxId })
+          },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
 
-      setTransactions(response.data.transactions || []);
-      toast.dismiss();
-      if (response.data.transactions.length === 0) {
-        toast.error('No transactions found!');
-      } else {
-        toast.success(`Found ${response.data.transactions.length} transactions`);
-      }
+      const { data, total, page, limit, totalPages } = response.data;
+      console.log(data)
+      setTransactions(data || []);
+      setPagination({
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages
+      });
+      setHasSearched(true);
     } catch (error) {
-      toast.dismiss();
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error("Error fetching transactions");
-      }
+      toast.error(error.response?.data?.message || "Error fetching transactions");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleFilter = async () => {
+    try {
+      setIsLoading(true);
+      setHasSearched(true);
+      setPagination(prev => ({ ...prev, page: 1 }));
+      await fetchPayins();
+      toast.success('Filter applied successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Error applying filters");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    setPaymentId('');
+    setTrxId('');
+    setStatus('');
+    setStartDate('');
+    setEndDate('');
+    setPagination(prev => ({ ...prev, page: 1 }));
+    fetchPayins();
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage > 0 && newPage <= pagination.totalPages) {
+      setPagination(prev => ({ ...prev, page: newPage }));
+    }
+  };
+
+  // Format amount with currency
+  const formatAmount = (amount, currency) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency || 'BDT'
+    }).format(amount);
+  };
+
+  // Security: Mask sensitive information
+  const maskAccountNumber = (account) => {
+    if (!account) return 'N/A';
+    return `****${account.slice(-4)}`;
+  };
+
   return (
     <section className="flex h-screen font-jost overflow-hidden">
-      {/* Sidebar */}
-      <div className="shrink-0 h-screen overflow-y-auto overflow-x-hidden bg-white border-r">
+      <div className="shrink-0 h-screen overflow-y-auto bg-white border-r">
         <Sidebar isOpen={sidebarOpen} />
       </div>
 
-      {/* Main Content */}
-      <section className="flex-1 w-full h-screen overflow-y-auto">
+      <section className="flex-1 w-full h-screen overflow-y-auto bg-gray-50">
         <Header toggleSidebar={toggleSidebar} />
-        {/* Your scrollable content below header */}
-        <div className="mx-auto px-4 py-8">
-          <Toaster />
-          <h1 className="text-2xl font-bold mb-6">Transaction</h1>
-
-          <div className="border rounded-lg shadow-sm border-gray-200">
-            <div className="text-lg font-semibold mb-4 bg-gray-100 px-[20px] py-[5px]">Pay In</div>
-
-            <div className="grid md:grid-cols-2 gap-4 mb-6 px-6 py-3">
-              <div>
-                <label className="block mb-1 text-sm font-medium">Payment ID</label>
-                <input
-                  type="text"
-                  value={paymentId}
-                  onChange={(e) => setPaymentId(e.target.value)}
-                  placeholder="Enter Payment ID"
-                  className="w-full px-4 py-2 border rounded-md focus:ring border-gray-200 focus:ring-green-300"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 text-sm font-medium">TrxID</label>
-                <input
-                  type="text"
-                  value={trxId}
-                  onChange={(e) => setTrxId(e.target.value)}
-                  placeholder="Enter TrxID"
-                  className="w-full px-4 py-2 border rounded-md focus:ring border-gray-200 focus:ring-green-300"
-                />
+     <div className="px-6 py-8">
+            <Toaster />
+            <h1 className="text-2xl font-bold mb-6">Payin Transactions</h1>
+  
+            {/* Filter Section */}
+            <div className="bg-white p-4 rounded-lg shadow mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment ID</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search by Payment ID"
+                      value={paymentId}
+                      onChange={(e) => setPaymentId(e.target.value)}
+                      className="w-full p-2 border rounded border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <FiSearch className="absolute right-3 top-3 text-gray-400" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Transaction ID</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search by Trx ID"
+                      value={trxId}
+                      onChange={(e) => setTrxId(e.target.value)}
+                      className="w-full p-2 border rounded focus:outline-none border-gray-200 focus:ring-2 focus:ring-blue-500"
+                    />
+                    <FiSearch className="absolute right-3 top-3 text-gray-400" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="w-full p-2 border rounded focus:outline-none border-gray-200 focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="expired">Expired</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full p-2 border rounded focus:outline-none border-gray-200 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium  text-gray-700 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full p-2 border rounded focus:outline-none border-gray-200 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex items-end space-x-2">
+                  <button
+                    onClick={handleFilter}
+                    disabled={isLoading}
+                    className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
+                  >
+                    <FaFilter className="mr-2" /> Filter
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="flex items-center justify-center bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+                  >
+                    <FaRedo className="mr-2" /> Reset
+                  </button>
+                </div>
               </div>
             </div>
-
-            <div className="flex justify-center px-3 pb-6">
-              <button
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-full flex items-center gap-2 transition disabled:opacity-70"
-              >
-                <FiSearch />
-                {isLoading ? 'Filtering...' : 'Filter'}
-              </button>
+  
+            {/* Transactions Table */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              {isLoading ? (
+                <div className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading transactions...</p>
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="p-8 text-center">
+                  <p className="text-gray-600">
+                    {hasSearched ? 'No transactions found matching your criteria' : 'No transactions available'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment ID</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction ID</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {transactions.map((transaction) => (
+                          <tr key={transaction._id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {transaction.paymentId || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {moment(transaction.createdAt).format('DD MMM YYYY, h:mm A')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {formatAmount(transaction.expectedAmount, transaction.currency)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {maskAccountNumber(transaction.payerAccount)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                ${transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                  transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                  'bg-red-100 text-red-800'}`}>
+                                {transaction.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {transaction.transactionId || 'N/A'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Pagination Controls */}
+                  <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
+                    <div className="text-sm text-gray-700">
+                      Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
+                      <span className="font-medium">
+                        {Math.min(pagination.page * pagination.limit, pagination.total)}
+                      </span>{' '}
+                      of <span className="font-medium">{pagination.total}</span> results
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handlePageChange(pagination.page - 1)}
+                        disabled={pagination.page === 1}
+                        className="px-3 py-1 border rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        onClick={() => handlePageChange(pagination.page + 1)}
+                        disabled={pagination.page === pagination.totalPages}
+                        className="px-3 py-1 border rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-
-          <div className="mt-6 bg-white p-6 border rounded shadow-sm border-gray-200 ">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-10">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
-              </div>
-            ) : hasSearched && transactions.length === 0 ? (
-              <p className="text-center text-gray-500 py-6">No transactions found matching your criteria</p>
-            ) : transactions.length > 0 ? (
-              <div className="overflow-x-auto border-[2px] border-gray-200">
-                <table className="w-full text-left table-auto border-t border-gray-200 ">
-                  <thead>
-                    <tr className="text-sm text-gray-600 border-b-[2px] border-gray-200">
-                      <th className="py-2 px-2">#</th>
-                      <th className="py-2 px-2">Payment ID</th>
-                      <th className="py-2 px-2">TrxID</th>
-                      <th className="py-2 px-2">Amount</th>
-                      <th className="py-2 px-2">Status</th>
-                      <th className="py-2 px-2">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.map((txn, index) => (
-                      <tr key={index} className=" hover:bg-gray-50 border-gray-200">
-                        <td className="py-3 px-2">{index + 1}</td>
-                        <td className="py-3 px-2">{txn.paymentId || 'N/A'}</td>
-                        <td className="py-3 px-2">{txn.transactionId || 'N/A'}</td>
-                        <td className="py-3 px-2">৳ {txn.expectedAmount || txn.receivedAmount || '0'}</td>
-                        <td className={`py-3 px-2 font-medium ${
-                          txn.status === 'completed' ? 'text-green-600' : 
-                          txn.status === 'failed' ? 'text-red-600' : 'text-yellow-600'
-                        }`}>
-                          {txn.status || 'N/A'}
-                        </td>
-                        <td className="py-3 px-2 text-sm text-gray-500">
-                          {new Date(txn.createdAt).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-center text-gray-500 py-6">
-                Enter search criteria and click Filter to find transactions
-              </p>
-            )}
-          </div>
-        </div>
       </section>
     </section>
-  )
-}
+  );
+};
 
-export default Payin
+export default Payin;

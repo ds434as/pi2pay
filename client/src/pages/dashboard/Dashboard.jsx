@@ -67,6 +67,7 @@ const Dashboard = () => {
         }
         const data = await response.json();
         setDashboardData(data.data);
+        console.log(data.data)
       } catch (err) {
         setError(err.message);
       } finally {
@@ -188,9 +189,8 @@ const Dashboard = () => {
   const summaryCards = [
     {
       title: 'Total Received',
-      value: `৳${dashboardData.summary.bankAccounts.totalReceived.toLocaleString()}`,
+      value: `৳${dashboardData.summary.payin.completedAmount}`,
       icon: <FaBangladeshiTakaSign className="w-6 h-6" />,
-      change: '+12%',
       isPositive: true,
       gradient: 'from-indigo-500 to-blue-500',
       chart: (
@@ -209,9 +209,8 @@ const Dashboard = () => {
     },
     {
       title: 'Total Payouts',
-      value: `৳${dashboardData.summary.bankAccounts.totalPayouts.toLocaleString()}`,
+      value: `৳${dashboardData.summary.payout.completedAmount}`,
       icon: <FiCreditCard className="w-6 h-6" />,
-      change: '+5%',
       isPositive: true,
       gradient: 'from-green-500 to-teal-500',
       chart: (
@@ -232,7 +231,6 @@ const Dashboard = () => {
       title: 'Active Accounts',
       value: dashboardData.summary.bankAccounts.activeAccounts,
       icon: <FiCheckCircle className="w-6 h-6" />,
-      change: '+2',
       isPositive: true,
       gradient: 'from-purple-500 to-pink-500',
       chart: (
@@ -381,254 +379,7 @@ const Dashboard = () => {
             ))}
           </div>
 
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-2">
-            {/* Enhanced Payment Flow Chart */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-800">Payment Flow Analytics</h2>
-                  <p className="text-sm text-gray-500">
-                    {timeRange === 'day' ? 'Last 24 hours' : 
-                     timeRange === 'week' ? 'Last 7 days' : 
-                     timeRange === 'month' ? 'Last 30 days' : 'Last 12 months'}
-                  </p>
-                </div>
-                <div className="flex space-x-2">
-                  <button className="flex items-center px-3 py-1 text-sm bg-indigo-50 text-indigo-600 rounded-md transition-colors hover:bg-indigo-100">
-                    <FiActivity className="mr-1" /> Export
-                  </button>
-                </div>
-              </div>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart
-                    data={chartData}
-                    margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                    <XAxis 
-                      dataKey="name" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#6B7280', fontSize: 12 }}
-                      tickMargin={10}
-                    />
-                    <YAxis 
-                      yAxisId="left"
-                      orientation="left"
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#6B7280', fontSize: 12 }}
-                      tickFormatter={(value) => `৳${value / 1000}k`}
-                    />
-                    <YAxis 
-                      yAxisId="right"
-                      orientation="right"
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#6B7280', fontSize: 12 }}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend 
-                      formatter={renderColorfulLegendText}
-                      wrapperStyle={{ paddingTop: '20px' }}
-                    />
-                    <Area 
-                      yAxisId="left"
-                      type="monotone" 
-                      dataKey="payin" 
-                      name="Pay In" 
-                      stroke="#4F46E5" 
-                      strokeWidth={2}
-                      fillOpacity={0.2} 
-                      fill="url(#colorPayin)" 
-                    />
-                    <Area 
-                      yAxisId="left"
-                      type="monotone" 
-                      dataKey="payout" 
-                      name="Payout" 
-                      stroke="#10B981" 
-                      strokeWidth={2}
-                      fillOpacity={0.2} 
-                      fill="url(#colorPayout)" 
-                    />
-                    <Bar 
-                      yAxisId="right"
-                      dataKey="transactions" 
-                      name="Transactions" 
-                      barSize={20} 
-                      fill="#8B5CF6"
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <defs>
-                      <linearGradient id="colorPayin" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#4F46E5" stopOpacity={0.1}/>
-                      </linearGradient>
-                      <linearGradient id="colorPayout" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Enhanced Transaction Status Chart */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-800">Transaction Analytics</h2>
-                  <p className="text-sm text-gray-500">Current month statistics</p>
-                </div>
-                <div className="flex space-x-2">
-                  <button className="flex items-center px-3 py-1 text-sm bg-gray-50 text-gray-600 rounded-md transition-colors hover:bg-gray-100">
-                    <FiPieChart className="mr-1" /> Details
-                  </button>
-                </div>
-              </div>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <div className="flex h-full">
-                    <div className="w-1/2 h-full pr-4">
-                      <div className="h-1/2">
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">Transaction Status</h3>
-                        <ResponsiveContainer width="100%" height="80%">
-                          <PieChart>
-                            <Pie
-                              data={statusData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={60}
-                              outerRadius={80}
-                              paddingAngle={2}
-                              dataKey="value"
-                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                              labelLine={false}
-                            >
-                              {statusData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip 
-                              formatter={(value) => [`${value} transactions`, '']}
-                              contentStyle={{
-                                borderRadius: '8px',
-                                border: 'none',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                              }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <div className="h-1/2 pt-4">
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">Payment Methods</h3>
-                        <ResponsiveContainer width="100%" height="80%">
-                          <PieChart>
-                            <Pie
-                              data={paymentMethodsData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={40}
-                              outerRadius={60}
-                              paddingAngle={2}
-                              dataKey="value"
-                              nameKey="name"
-                              label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                            >
-                              {paymentMethodsData.map((entry, index) => (
-                                <Cell key={`cell-method-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip 
-                              formatter={(value, name) => [`${value}%`, name]}
-                              contentStyle={{
-                                borderRadius: '8px',
-                                border: 'none',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                              }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                    <div className="w-1/2 flex flex-col justify-between pl-4 border-l border-gray-100">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">Status Breakdown</h3>
-                        <div className="space-y-3">
-                          {statusData.map((item, index) => (
-                            <div key={`status-${index}`} className="flex items-center">
-                              <div 
-                                className="w-3 h-3 rounded-full mr-2" 
-                                style={{ backgroundColor: item.color }}
-                              ></div>
-                              <span className="text-sm text-gray-600 flex-1">{item.name}</span>
-                              <span className="text-sm font-medium text-gray-900">
-                                {item.value} <span className="text-gray-400">({Math.round((item.value / statusData.reduce((a, b) => a + b.value, 0)) * 100)}%)</span>
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="mt-4">
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">Success Rate</h3>
-                        <div className="flex items-center">
-                          <div className="w-2/3 pr-4">
-                            <ResponsiveContainer width="100%" height={100}>
-                              <RadialBarChart 
-                                innerRadius="70%" 
-                                outerRadius="90%" 
-                                data={radialData} 
-                                startAngle={90} 
-                                endAngle={-270}
-                              >
-                                <PolarAngleAxis 
-                                  type="number" 
-                                  domain={[0, 100]} 
-                                  angleAxisId={0} 
-                                  tick={false}
-                                />
-                                <RadialBar
-                                  background
-                                  dataKey="value"
-                                  cornerRadius={10}
-                                  fill="#4F46E5"
-                                />
-                              </RadialBarChart>
-                            </ResponsiveContainer>
-                          </div>
-                          <div className="w-1/3">
-                            <div className="text-3xl font-bold text-gray-800">75%</div>
-                            <div className="text-sm text-gray-500 mt-1">+5% from last month</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-4">
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">Methods Breakdown</h3>
-                        <div className="space-y-2">
-                          {paymentMethodsData.map((item, index) => (
-                            <div key={`method-${index}`} className="flex items-center">
-                              <div 
-                                className="w-3 h-3 rounded-full mr-2" 
-                                style={{ backgroundColor: item.color }}
-                              ></div>
-                              <span className="text-sm text-gray-600 flex-1">{item.name}</span>
-                              <span className="text-sm font-medium text-gray-900">
-                                {item.value}%
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
+     
 
           {/* Recent Transactions */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -637,9 +388,9 @@ const Dashboard = () => {
                 <h2 className="text-lg font-semibold text-gray-800">Recent Transactions</h2>
                 <p className="text-sm text-gray-500">Last 10 transactions</p>
               </div>
-              <button className="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+              {/* <button className="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
                 View all →
-              </button>
+              </button> */}
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">

@@ -383,7 +383,7 @@ Paymentrouter.post("/checkout", async (req, res) => {
                 Users with balance >= ${requiredBalance}: ${usersWithBalance}
                 Users with agent accounts: ${usersWithAccounts}`);
 
-            return res.status(404).send({
+            return res.send({
                 success: false,
                 message: `No eligible agents found with balance >= ${requiredBalance} and active accounts`,
                 diagnostics: {
@@ -1012,6 +1012,7 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
 
       // ---------matched-user---------------
       const matcheduser=await UserModel.findById({_id:bankaccount.user_id});
+      console.log("helll",matcheduser)
       const agentcomissionmoney=(forwardedSms.transactionAmount/100)*matcheduser.withdracommission;
       console.log(agentcomissionmoney)
       matcheduser.balance+=forwardedSms.transactionAmount;

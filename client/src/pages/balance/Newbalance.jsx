@@ -39,7 +39,7 @@ const Newbalance = () => {
                     <th className="px-6 py-3">Payment Method</th>
                     <th className="px-6 py-3">Payment Amount</th>
                     <th className="px-6 py-3">Provider Cost</th>
-                    <th className="px-6 py-3">Provider Net</th>
+                    {/* <th className="px-6 py-3">Provider Net</th> */}
                     <th className="px-6 py-3">Payout Amount</th>
                     <th className="px-6 py-3">Prepayment Amount</th>
                     <th className="px-6 py-3">Balance</th>
@@ -55,10 +55,10 @@ const Newbalance = () => {
                     </td>
 <td className="px-6 py-4">৳{userData?.totalpayment?.toLocaleString()}</td>
 <td className="px-6 py-4">৳{userData?.providercost?.toLocaleString()}</td>
-<td className="px-6 py-4">৳{providernet?.toLocaleString()}</td>
+{/* <td className="px-6 py-4">৳{providernet?.toLocaleString()}</td> */}
 <td className="px-6 py-4">৳{userData?.totalpayout?.toLocaleString()}</td>
 <td className="px-6 py-4">৳{userData?.totalprepayment?.toLocaleString()}</td>
-<td className="px-6 py-4">৳{(userData?.totalprepayment - providernet)?.toLocaleString()}</td>
+<td className="px-6 py-4">৳{userData?.balance}</td>
                     {/* <td className="px-6 py-4">
                       <button className="text-blue-600 hover:text-blue-800">
                         <FaEdit className="text-lg" />
