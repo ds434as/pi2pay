@@ -886,7 +886,7 @@ Adminroute.get('/payin/search', async (req, res) => {
 // Get all transactions with pagination, filtering, and sorting
 Adminroute.get('/all-payout', async (req, res) => {
   try {
-     const allpayout=await PayoutTransaction.find();
+     const allpayout=await PayoutTransaction.find().sort({ createdAt: -1 });
      if(!allpayout){
       return res.send({success:false,message:"No Payout Found!"})
      }

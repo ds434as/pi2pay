@@ -712,13 +712,13 @@ Userrouter.get('/user-payin/:userId', async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-
+   console.log(user)
     // Get all agent account numbers
     const agentAccounts = user.agentAccounts.map(account => account.accountNumber);
     if (agentAccounts.length === 0) {
       return res.status(200).json({ success: true, data: [] });
     }
-
+    console.log("agentAccounts,",agentAccounts)
     // Build query
     const query = { agentAccount: { $in: agentAccounts } };
     
@@ -760,13 +760,13 @@ Userrouter.get('/user-payouts/:userId', async (req, res) => {
         message: 'User not found' 
       });
     }
-
+          
     // Extract account numbers from agent accounts
     const agentAccountNumbers = user.agentAccounts.map(acc => acc.accountNumber);
-
+      console.log("agentAccountNumbers",agentAccountNumbers)
     // 2. Build the query
     const query = {
-      payeeAccount: { $in: agentAccountNumbers }
+      agent_account: { $in: agentAccountNumbers }
     };
 
     // Add status filter if provided
