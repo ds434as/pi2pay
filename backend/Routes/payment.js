@@ -99,6 +99,7 @@ Paymentrouter.post("/payment",async(req, res)=>{
       callbackUrl: data.callbackUrl,
       paymentType: "p2p",
       merchantid:matched_merchant._id,
+      
     });
 
     return res.status(200).json({
@@ -430,8 +431,9 @@ Paymentrouter.post("/checkout", async (req, res) => {
             accountNumber: selectedAccount.accountNumber,
             shopName: selectedAccount.shopName
         });
-
-        return res.status(200).send({
+match_payment.agentAccount=selectedAccount.accountNumber;
+match_payment.save();
+return res.status(200).send({
             success: true,
             message: "Agent and bank account selected successfully",
             agent: {
@@ -453,6 +455,8 @@ Paymentrouter.post("/checkout", async (req, res) => {
                 minimumRequiredBalance: requiredBalance
             }
         });
+
+
 
     } catch (error) {
         console.error("Checkout error:", error);
@@ -1100,9 +1104,9 @@ const forwardedSms = await ForwardedSms.findOne({
 //   }
 // });
 
-router.post("/changePayoutStatus", async (req, res) => {
+Paymentrouter.post("/changePayoutStatus", async (req, res) => {
   const { id, status, payment_id, transactionId, admin_name } = req.body;
-  console.log(req.body.payment_id)
+  console.log(req.body)
   const requestTime = new Date().toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -1190,6 +1194,7 @@ router.post("/changePayoutStatus", async (req, res) => {
     transaction.transactionId = transactionId;
     transaction.update_by = admin_name;
     transaction.createdAt = requestTime;
+    transaction.agent_account = req.body.agentnumber;
     const savedTransaction = await transaction.save();
 
     if (status === "success") {

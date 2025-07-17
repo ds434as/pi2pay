@@ -9,7 +9,7 @@ import moment from 'moment';
 import { RiShareForwardLine } from "react-icons/ri";
 import Swal from 'sweetalert2';
 
-const Payoutrequest = () => {
+const second = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
@@ -35,10 +35,10 @@ const Payoutrequest = () => {
   const [transactionId, setTransactionId] = useState('');
   const [status, setStatus] = useState('pending');
   const [notes, setNotes] = useState('');
-  const [agentnumber,setagentnumber] = useState('');
+
   const statusOptions = ['pending', 'approved', 'rejected', 'success'];
   const methodOptions = ['bank', 'paypal', 'crypto', 'other'];
- console.log(agentnumber)
+
   const toggleSidebar = () => {
     setSidebarOpen((prev) => !prev);
   };
@@ -166,8 +166,7 @@ const Payoutrequest = () => {
         payment_id: currentRequest.paymentid,
         transactionId: transactionId,
         admin_name: currentUser._id,
-        adminNotes: notes,
-        agentnumber
+        adminNotes: notes
       });
       if (response.data.success) {
         Swal.fire({
@@ -297,16 +296,7 @@ const handleForwardRequest = async (request) => {
                       placeholder="Enter transaction ID"
                     />
                   </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Agent Account</label>
-                    <input
-                      type="text"
-                      value={agentnumber}
-                      onChange={(e) => setagentnumber(e.target.value)}
-                      className="w-full p-2 border border-gray-300 outline-theme rounded-md  focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Enter transaction ID"
-                    />
-                  </div>
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
@@ -597,4 +587,4 @@ const handleForwardRequest = async (request) => {
   );
 };
 
-export default Payoutrequest;
+export default second;
