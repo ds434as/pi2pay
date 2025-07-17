@@ -790,10 +790,10 @@ const forwardedSms = await ForwardedSms.findOne({
 
     const expirationDuration = 24 * 60 * 60 * 1000;
     const elapsedTime = currentTime - transaction.createdAt;
-   const bankaccount=await BankAccount.findOne({accountNumber:forwardedSms.agentAccount});
+   const bankaccount=await BankAccount.findOne({accountNumber:transaction.agentAccount});
       const matcheduser=await UserModel.findById({_id:bankaccount.user_id});
     // 4. Update transaction
-    transaction.agentAccount = forwardedSms.agentAccount;
+    // transaction.agentAccount = forwardedSms.agentAccount;
     transaction.payerAccount = forwardedSms.customerAccount;
     transaction.transactionId = forwardedSms.transactionId;
     transaction.receivedAmount = forwardedSms.transactionAmount;
@@ -902,7 +902,205 @@ const forwardedSms = await ForwardedSms.findOne({
   }
 });
 // Paymentrouter.post("/changePaymentStatus", change_payment_status);
-Paymentrouter.post("/changePayoutStatus", async (req, res) => {
+// Paymentrouter.post("/changePayoutStatus", async (req, res) => {
+//   const { id, status, payment_id, transactionId, admin_name } = req.body;
+//   console.log(req.body.payment_id)
+//   const requestTime = new Date().toLocaleString('en-US', {
+//     year: 'numeric',
+//     month: 'short',
+//     day: 'numeric',
+//     hour: 'numeric',
+//     minute: 'numeric',
+//     second: 'numeric',
+//     hour12: true,
+//   });
+//   console.log(`Request received at: ${requestTime}`);
+//   console.log(id, status, transactionId);
+
+//   if (!status || !transactionId) {
+//     return res.status(400).json({ message: 'Please check all fields' });
+//   }
+//   console.log(status);
+
+//   try {
+//     const transaction = await PayoutTransaction.findOne({paymentId: payment_id});
+//     console.log("dfsfd", transaction)
+//     const forwardedSms = await ForwardedSms.findOne({
+//       transactionId: transactionId,
+//       transactionAmount: transaction.requestAmount,
+//       transactionType: "payout"
+//     });
+//     console.log(forwardedSms);
+
+//     if (!forwardedSms) {
+//       return res.status(200).json({
+//         success: false,
+//         type: "tid",
+//         message: "Transaction ID is not valid.",
+//       });
+//     }
+
+//     if (forwardedSms.status === "used") {
+//       return res.status(200).json({
+//         success: false,
+//         type: "tid",
+//         message: "Transaction ID is already used.",
+//       });
+//     }
+
+//     // ---------------------------UPDATE AGENT WITHDRAWAL REQUEST---------------------
+//     // Find the agent with a withdrawal request matching the payment_id
+//     const agent = await UserModel.findOne({
+//       "withdrawalRequests.paymentid": payment_id
+//     });
+
+//     if (!agent) {
+//       console.log("No agent found with a withdrawal request matching payment ID:", payment_id);
+//       return res.status(400).json({
+//         success: false,
+//         message: "No agent found with this payment ID"
+//       });
+//     }
+
+//     // Find the specific withdrawal request
+//     const withdrawalRequest = agent.withdrawalRequests.find(
+//       req => req.paymentid === payment_id
+//     );
+
+//     if (!withdrawalRequest) {
+//       console.log("No withdrawal request found with payment ID:", payment_id);
+//       return res.status(400).json({
+//         success: false,
+//         message: "No withdrawal request found with this payment ID"
+//       });
+//     }
+
+//     // Update the withdrawal request status and transactionId
+//     const updatedAgent = await UserModel.findOneAndUpdate(
+//       {
+//         _id: agent._id,
+//         "withdrawalRequests._id": withdrawalRequest._id
+//       },
+//       {
+//         $set: { 
+//           "withdrawalRequests.$.status": status,
+//           "withdrawalRequests.$.transactionId": transactionId,
+//           "withdrawalRequests.$.processedBy": admin_name
+//         }
+//       },
+//       { new: true }
+//     );
+    
+//     if (!updatedAgent) {
+//       console.log("Failed to update withdrawal request");
+//       return res.status(400).json({
+//         success: false,
+//         message: "Failed to update withdrawal request"
+//       });
+//     }
+
+//     console.log("Withdrawal request updated successfully");
+//     console.log("ttt",transaction)
+//  const bankaccount=await BankAccount.findOne({accountNumber:forwardedSms.agentAccount});
+//  if(!bankaccount){
+//   return res.send({success:false,message:"Agent did not find."})
+//  }
+//     if (status === "success") {
+//       // Update ForwardedSms status to "used"
+//       forwardedSms.status = "used";
+//       await forwardedSms.save();
+     
+//       bankaccount.total_payoutno+=1;
+//       bankaccount.total_cashout+=forwardedSms.transactionAmount;
+//       bankaccount.save();
+
+//       // ---------matched-user---------------
+//       const matcheduser=await UserModel.findById({_id:bankaccount.user_id});
+//       console.log("helll",matcheduser)
+//       const agentcomissionmoney=(forwardedSms.transactionAmount/100)*matcheduser.withdracommission;
+//       console.log(agentcomissionmoney)
+//       matcheduser.balance+=forwardedSms.transactionAmount;
+//       matcheduser.balance+=agentcomissionmoney;
+//       matcheduser.providercost+=agentcomissionmoney;
+//       matcheduser.totalpayout+=forwardedSms.transactionAmount;
+//       matcheduser.save();
+//       console.log("dff",forwardedSms)
+//          //  ------------------merchant---------------------
+//       const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
+//       merchant_info.balance-=forwardedSms.transactionAmount;
+//       merchant_info.total_payout+=forwardedSms.transactionAmount;
+//       const comissionmoney=(forwardedSms.transactionAmount/100)*merchant_info.withdrawCommission;
+//       merchant_info.balance-=forwardedSms.transactionAmount;
+//       merchant_info.getwaycost+=comissionmoney;
+//       merchant_info.save();
+//     }
+
+//     // Update the transaction status
+//     transaction.status = status;
+//     transaction.statusDate = new Date();
+//     const savedTransaction = await transaction.save();
+
+//     // Update transaction details
+//     await PayoutTransaction.findByIdAndUpdate(
+//       { _id: transaction._id },
+//       {
+//         $set: {
+//           transactionId: transactionId,
+//           createdAt: requestTime,
+//           sentAmount: forwardedSms.transactionAmount,
+//           update_by: admin_name,
+//           agent_account: forwardedSms.agentAccount,
+//         },
+//       }
+//     );
+
+//     if (['success', 'failed', 'rejected'].includes(status)) {
+//       let statusEmoji;
+//       let statusColor;
+
+//       if (status === 'success') {
+//         statusEmoji = "🟢";
+//         statusColor = "**Success**";
+//       } else if (status === 'failed') {
+//         statusEmoji = "🔴";
+//         statusColor = "**Failed**";
+//       } else if (status === 'rejected') {
+//         statusEmoji = "🟡";
+//         statusColor = "**Rejected**";
+//       }
+
+//       const payload =
+//         `**${statusEmoji} Payout Status Update!**\n` +
+//         `\n` +
+//         `**Transaction ID:** \`${forwardedSms.transactionId}\`\n` +
+//         `**Payment ID:** \`${transaction.paymentId}\`\n` +
+//         `**Order ID:** \`${transaction.orderId}\`\n` +
+//         `**Amount Sent:** ${transaction.currency} ${forwardedSms.transactionAmount}\n` +
+//         `**New Status:** ${statusEmoji} *${statusColor}*\n` +
+//         `**Status Updated At:** ${new Date().toLocaleString()}\n` +
+//         `\n` +
+//         `🎉 *Thank you for using our service! Keep enjoying seamless transactions!* 🎉`;
+
+//       easypay_payout_bot.sendMessage(7920367057, payload, {
+//         parse_mode: "Markdown",
+//       });
+//       easypay_bot.sendMessage(7920367057, payload, {
+//         parse_mode: "Markdown",
+//       });
+//     }
+
+//     res.json({ success: true, message: "Status updated successfully!" });
+
+//   } catch (e) {
+//     res.json({
+//       success: false,
+//       error: e.message,
+//     });
+//     console.log(e);
+//   }
+// });
+
+router.post("/changePayoutStatus", async (req, res) => {
   const { id, status, payment_id, transactionId, admin_name } = req.body;
   console.log(req.body.payment_id)
   const requestTime = new Date().toLocaleString('en-US', {
@@ -924,27 +1122,12 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
 
   try {
     const transaction = await PayoutTransaction.findOne({paymentId: payment_id});
-    console.log("dfsfd", transaction)
-    const forwardedSms = await ForwardedSms.findOne({
-      transactionId: transactionId,
-      transactionAmount: transaction.requestAmount,
-      transactionType: "payout"
-    });
-    console.log(forwardedSms);
+    console.log("Transaction found:", transaction)
 
-    if (!forwardedSms) {
-      return res.status(200).json({
+    if (!transaction) {
+      return res.status(400).json({
         success: false,
-        type: "tid",
-        message: "Transaction ID is not valid.",
-      });
-    }
-
-    if (forwardedSms.status === "used") {
-      return res.status(200).json({
-        success: false,
-        type: "tid",
-        message: "Transaction ID is already used.",
+        message: "No transaction found with this payment ID"
       });
     }
 
@@ -1000,59 +1183,47 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
     }
 
     console.log("Withdrawal request updated successfully");
-    console.log("ttt",transaction)
- const bankaccount=await BankAccount.findOne({accountNumber:forwardedSms.agentAccount});
- if(!bankaccount){
-  return res.send({success:false,message:"Agent did not find."})
- }
-    if (status === "success") {
-      // Update ForwardedSms status to "used"
-      forwardedSms.status = "used";
-      await forwardedSms.save();
-     
-      bankaccount.total_payoutno+=1;
-      bankaccount.total_cashout+=forwardedSms.transactionAmount;
-      bankaccount.save();
-
-      // ---------matched-user---------------
-      const matcheduser=await UserModel.findById({_id:bankaccount.user_id});
-      console.log("helll",matcheduser)
-      const agentcomissionmoney=(forwardedSms.transactionAmount/100)*matcheduser.withdracommission;
-      console.log(agentcomissionmoney)
-      matcheduser.balance+=forwardedSms.transactionAmount;
-      matcheduser.balance+=agentcomissionmoney;
-      matcheduser.providercost+=agentcomissionmoney;
-      matcheduser.totalpayout+=forwardedSms.transactionAmount;
-      matcheduser.save();
-      console.log("dff",forwardedSms)
-         //  ------------------merchant---------------------
-      const merchant_info=await Merchantkey.findById({_id:transaction.merchantid});
-      merchant_info.balance-=forwardedSms.transactionAmount;
-      merchant_info.total_payout+=forwardedSms.transactionAmount;
-      const comissionmoney=(forwardedSms.transactionAmount/100)*merchant_info.withdrawCommission;
-      merchant_info.balance-=forwardedSms.transactionAmount;
-      merchant_info.getwaycost+=comissionmoney;
-      merchant_info.save();
-    }
 
     // Update the transaction status
     transaction.status = status;
     transaction.statusDate = new Date();
+    transaction.transactionId = transactionId;
+    transaction.update_by = admin_name;
+    transaction.createdAt = requestTime;
     const savedTransaction = await transaction.save();
 
-    // Update transaction details
-    await PayoutTransaction.findByIdAndUpdate(
-      { _id: transaction._id },
-      {
-        $set: {
-          transactionId: transactionId,
-          createdAt: requestTime,
-          sentAmount: forwardedSms.transactionAmount,
-          update_by: admin_name,
-          agent_account: forwardedSms.agentAccount,
-        },
+    if (status === "success") {
+      // Update agent and merchant balances if status is success
+      const bankaccount = await BankAccount.findOne({accountNumber: transaction.agent_account});
+      if (!bankaccount) {
+        return res.send({success:false, message:"Agent bank account not found."})
       }
-    );
+      
+      bankaccount.total_payoutno += 1;
+      bankaccount.total_cashout += transaction.requestAmount;
+      await bankaccount.save();
+
+      const matcheduser = await UserModel.findById({_id: bankaccount.user_id});
+      if (matcheduser) {
+        const agentcomissionmoney = (transaction.requestAmount/100) * matcheduser.withdracommission;
+        matcheduser.balance += transaction.requestAmount;
+        matcheduser.balance += agentcomissionmoney;
+        matcheduser.providercost += agentcomissionmoney;
+        matcheduser.totalpayout += transaction.requestAmount;
+        await matcheduser.save();
+      }
+
+      // Update merchant balance
+      const merchant_info = await Merchantkey.findById({_id: transaction.merchantid});
+      if (merchant_info) {
+        const comissionmoney = (transaction.requestAmount/100) * merchant_info.withdrawCommission;
+        merchant_info.balance -= transaction.requestAmount;
+        merchant_info.total_payout += transaction.requestAmount;
+        merchant_info.balance -= transaction.requestAmount;
+        merchant_info.getwaycost += comissionmoney;
+        await merchant_info.save();
+      }
+    }
 
     if (['success', 'failed', 'rejected'].includes(status)) {
       let statusEmoji;
@@ -1072,10 +1243,10 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
       const payload =
         `**${statusEmoji} Payout Status Update!**\n` +
         `\n` +
-        `**Transaction ID:** \`${forwardedSms.transactionId}\`\n` +
+        `**Transaction ID:** \`${transactionId}\`\n` +
         `**Payment ID:** \`${transaction.paymentId}\`\n` +
         `**Order ID:** \`${transaction.orderId}\`\n` +
-        `**Amount Sent:** ${transaction.currency} ${forwardedSms.transactionAmount}\n` +
+        `**Amount Sent:** ${transaction.currency} ${transaction.requestAmount}\n` +
         `**New Status:** ${statusEmoji} *${statusColor}*\n` +
         `**Status Updated At:** ${new Date().toLocaleString()}\n` +
         `\n` +
@@ -1092,11 +1263,11 @@ Paymentrouter.post("/changePayoutStatus", async (req, res) => {
     res.json({ success: true, message: "Status updated successfully!" });
 
   } catch (e) {
-    res.json({
+    res.status(500).json({
       success: false,
       error: e.message,
     });
-    console.log(e);
+    console.error(e);
   }
 });
 // Paymentrouter.post("/resendCallbackPayment", resend_callback_payment);
