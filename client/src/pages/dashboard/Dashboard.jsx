@@ -311,7 +311,7 @@ const Dashboard = () => {
       {/* Overlay for mobile sidebar */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-black opacity-50 lg:hidden"
+          className="fixed inset-0 z-[-1] bg-black opacity-50 lg:hidden"
           onClick={toggleSidebar}
         ></div>
       )}

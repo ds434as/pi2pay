@@ -749,12 +749,16 @@ Paymentrouter.post("/paymentSubmit",  async (req, res) => {
 
   try {
     // 1. Validate forwarded SMS
-    const forwardedSms = await ForwardedSms.findOne({
-      transactionId,
-      transactionType: "payin",
-      agentAccount,
-      customerAccount: payerAccount,
-    });
+const forwardedSms = await ForwardedSms.findOne({
+  transactionId,
+  transactionType: "payin",
+  $expr: {
+    $eq: [
+      { $substr: ["$customerAccount", 0, 4] },
+      { $substr: [payerAccount, 0, 4] }
+    ]
+  }
+});
    console.log(forwardedSms)
     if (!forwardedSms) {
       return res.status(200).json({
